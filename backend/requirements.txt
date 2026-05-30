@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+httpx
+boto3
+qrcode[pil]
+python-dotenv
+transformers
+torch
+pillow
+python-multipart
+numpy
