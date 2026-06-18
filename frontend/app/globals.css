@@ -1,9 +1,0 @@
-@import "tailwindcss";
-
-:root {
-  color-scheme: dark;
-}
-
-body {
-  font-feature-settings: "ss01" on, "ss02" on, "cv11" on;
-}
