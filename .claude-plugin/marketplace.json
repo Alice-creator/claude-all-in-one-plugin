@@ -1,0 +1,12 @@
+{
+  "name": "claude-all-in-one",
+  "owner": { "name": "Alice-creator" },
+  "description": "All-in-one Claude Code plugin marketplace.",
+  "plugins": [
+    {
+      "name": "claude-all-in-one-plugin",
+      "source": "./",
+      "description": "Data-analysis skills (dataset profiling and cleaning) — first domain of the all-in-one plugin."
+    }
+  ]
+}

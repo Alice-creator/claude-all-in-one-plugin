@@ -1,0 +1,13 @@
+{
+  "name": "claude-all-in-one-plugin",
+  "displayName": "Claude All-in-One Plugin",
+  "version": "0.1.0",
+  "description": "An all-in-one Claude Code plugin. First focus: data analysis (dataset profiling and cleaning).",
+  "author": { "name": "Alice-creator" },
+  "repository": "https://github.com/Alice-creator/claude-all-in-one-plugin",
+  "license": "MIT",
+  "keywords": ["data-analysis", "data-cleaning", "eda", "profiling", "pandas", "clean-code", "code-quality"],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks.json"
+}

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+*_clean.parquet
+*_clean.csv
+cleaning_log.md
+
+# test datasets + generated splits/reports (not part of the plugin)
+data/
+# generated skill artifacts
+problem_framing_brief.md
+*_splits/
+# local Claude Code state (permission grants etc., not plugin content)
+.claude/
