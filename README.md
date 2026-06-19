@@ -49,18 +49,21 @@ The three layers are deliberately split so the hook stays lightweight: a short n
 /plugin install claude-all-in-one-plugin@claude-all-in-one
 ```
 
-For local development from a clone:
+For local development from a clone (point at the clone's absolute path, then install):
 
 ```
 /plugin marketplace add /path/to/claude-all-in-one-plugin
+/plugin install claude-all-in-one-plugin@claude-all-in-one
 ```
+
+Plugins install at the user level — once installed, the skills and agents are available in **every** repo (restart Claude Code so they register). The GitHub install above reads the repo's default branch, so push/merge to `main` before using it.
 
 ## Requirements
 
-The data skills use Python with `pandas` (plus `openpyxl` for Excel, `pyarrow` for Parquet):
+The data skills use Python with `pandas` (plus `openpyxl` for Excel, `pyarrow` for Parquet). The modeling skills (`baseline`, `select-model`, `train-tune`, `check-drift`) additionally need `scikit-learn` and `scipy` (`readiness-check` is stdlib-only):
 
 ```
-pip install pandas numpy openpyxl pyarrow
+pip install pandas numpy scikit-learn scipy openpyxl pyarrow
 ```
 
 ## Roadmap
