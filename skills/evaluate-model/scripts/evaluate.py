@@ -18,7 +18,12 @@ import pandas as pd
 
 
 def load(path):
-    return pd.read_parquet(path) if path.lower().endswith(".parquet") else pd.read_csv(path)
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".parquet":
+        return pd.read_parquet(path)
+    if ext == ".tsv":
+        return pd.read_csv(path, sep="\t")
+    return pd.read_csv(path)
 
 
 def infer_task(y):
@@ -111,7 +116,7 @@ def pick_slice_cols(df, reserved, k=4):
 
 
 def fmt(v):
-    return f"{v:,.4g}"
+    return "n/a" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{v:,.4g}"
 
 
 def confusion_md(y, pred):

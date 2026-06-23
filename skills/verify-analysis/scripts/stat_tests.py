@@ -24,13 +24,22 @@ Usage:
 Prints a JSON result to stdout.
 """
 import argparse
+import contextlib
 import json
 import math
 import os
 import sys
 import warnings
 
-warnings.filterwarnings("ignore")
+
+@contextlib.contextmanager
+def _quiet_stats():
+    """Suppress scipy/pandas' benign small-sample / constant-input / tie warnings AROUND a
+    stat computation ONLY — not globally — so genuine numeric warnings (overflow, divide-by-zero)
+    elsewhere stay visible instead of being silently swallowed."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        yield
 
 
 def eprint(*a, **k):
@@ -65,16 +74,17 @@ def load(path, sheet=None):
 # ---------------------------------------------------------------------------
 # verdict helper — encodes the skeptical default
 # ---------------------------------------------------------------------------
-def verdict(p, effect, *, small, medium, n, min_n=30):
+def verdict(p, effect, *, small, medium, n, min_n=30, alpha=0.05):
     """Map (significance, effect magnitude, sample size) -> confirmed/weak/refuted.
 
-    - refuted : not significant, OR effect below the 'small' floor.
+    - refuted : not significant (p >= alpha), OR effect below the 'small' floor.
     - weak    : significant but effect only between small and medium, or n is thin.
     - confirmed: significant AND effect >= medium AND enough data.
-    Effect is compared on its absolute value.
+    Effect is compared on its absolute value. `alpha` may be a Bonferroni-corrected
+    threshold (alpha / family_size) when many findings are tested together.
     """
     a = abs(effect) if effect is not None and not _isnan(effect) else 0.0
-    if p is None or _isnan(p) or p >= 0.05 or a < small:
+    if p is None or _isnan(p) or p >= alpha or a < small:
         return "refuted"
     if a >= medium and n >= min_n:
         return "confirmed"
@@ -97,19 +107,20 @@ def _clean_pair(df, x, y):
 # ---------------------------------------------------------------------------
 # tests
 # ---------------------------------------------------------------------------
-def pearson(df, x, y):
+def pearson(df, x, y, alpha=0.05):
     from scipy import stats
     a, b = _clean_pair(df, x, y)
     n = int(len(a))
     if n < 3:
         return {"test": "pearson", "x": x, "y": y, "n": n,
                 "verdict": "inconclusive", "error": "fewer than 3 paired observations"}
-    r, p = stats.pearsonr(a, b)
+    with _quiet_stats():
+        r, p = stats.pearsonr(a, b)
     # Cohen: |r| 0.1 small, 0.3 medium, 0.5 large. Skeptic floor at 0.1.
     return {"test": "pearson", "x": x, "y": y, "n": n,
             "r": round(float(r), 4), "p_value": float(p),
             "effect_size": {"name": "pearson_r", "value": round(float(r), 4)},
-            "verdict": verdict(p, r, small=0.1, medium=0.3, n=n)}
+            "verdict": verdict(p, r, small=0.1, medium=0.3, n=n, alpha=alpha)}
 
 
 def _cohens_d(a, b):
@@ -123,7 +134,7 @@ def _cohens_d(a, b):
     return float((a.mean() - b.mean()) / sp)
 
 
-def two_group(df, x, y):
+def two_group(df, x, y, alpha=0.05):
     """Numeric y compared across the two levels of a 2-level grouping column x."""
     from scipy import stats
     gx, gy = _clean_pair(df, x, y)
@@ -139,13 +150,15 @@ def two_group(df, x, y):
     tiny = na < 20 or nb < 20
     if tiny:
         try:
-            stat, p = stats.mannwhitneyu(a, b, alternative="two-sided")
+            with _quiet_stats():
+                stat, p = stats.mannwhitneyu(a, b, alternative="two-sided")
             method = "mann_whitney_u"
         except ValueError as e:
             return {"test": "two_group", "x": x, "y": y, "n": n,
                     "verdict": "inconclusive", "error": str(e)}
     else:
-        stat, p = stats.ttest_ind(a, b, equal_var=False)  # Welch
+        with _quiet_stats():
+            stat, p = stats.ttest_ind(a, b, equal_var=False)  # Welch
         method = "welch_t"
     d = _cohens_d(a, b)
     return {"test": "two_group", "method": method, "x": x, "y": y,
@@ -156,10 +169,10 @@ def two_group(df, x, y):
             "effect_size": {"name": "cohens_d",
                             "value": (None if _isnan(d) else round(d, 4))},
             # Cohen's d: 0.2 small, 0.5 medium, 0.8 large. Skeptic floor 0.2.
-            "verdict": verdict(p, d, small=0.2, medium=0.5, n=n)}
+            "verdict": verdict(p, d, small=0.2, medium=0.5, n=n, alpha=alpha)}
 
 
-def anova(df, x, y):
+def anova(df, x, y, alpha=0.05):
     """One-way ANOVA of numeric y across the categories of x. Effect = eta^2."""
     from scipy import stats
     gx, gy = _clean_pair(df, x, y)
@@ -169,7 +182,8 @@ def anova(df, x, y):
     if len(groups) < 2:
         return {"test": "anova", "x": x, "y": y, "n": n, "verdict": "inconclusive",
                 "error": "need >= 2 groups with >= 2 observations each"}
-    F, p = stats.f_oneway(*groups)
+    with _quiet_stats():
+        F, p = stats.f_oneway(*groups)
     grand = gy.mean()
     ss_between = sum(len(g) * (g.mean() - grand) ** 2 for g in groups)
     ss_total = float(((gy - grand) ** 2).sum())
@@ -179,10 +193,10 @@ def anova(df, x, y):
             "effect_size": {"name": "eta_squared",
                             "value": (None if _isnan(eta2) else round(eta2, 4))},
             # eta^2: 0.01 small, 0.06 medium, 0.14 large. Skeptic floor 0.01.
-            "verdict": verdict(p, eta2, small=0.01, medium=0.06, n=n)}
+            "verdict": verdict(p, eta2, small=0.01, medium=0.06, n=n, alpha=alpha)}
 
 
-def chi2(df, x, y):
+def chi2(df, x, y, alpha=0.05):
     """Chi-square test of independence for two categorical columns. Effect = Cramer's V."""
     import pandas as pd
     from scipy import stats
@@ -192,7 +206,8 @@ def chi2(df, x, y):
     if table.shape[0] < 2 or table.shape[1] < 2:
         return {"test": "chi2", "x": x, "y": y, "n": n, "verdict": "inconclusive",
                 "error": "need >= 2 levels in each column"}
-    chi, p, dof, _ = stats.chi2_contingency(table)
+    with _quiet_stats():
+        chi, p, dof, _ = stats.chi2_contingency(table)
     r, c = table.shape
     denom = n * (min(r, c) - 1)
     v = math.sqrt(chi / denom) if denom > 0 else float("nan")
@@ -202,7 +217,7 @@ def chi2(df, x, y):
             "effect_size": {"name": "cramers_v",
                             "value": (None if _isnan(v) else round(v, 4))},
             # Cramer's V: 0.1 small, 0.3 medium, 0.5 large. Skeptic floor 0.1.
-            "verdict": verdict(p, v, small=0.1, medium=0.3, n=n)}
+            "verdict": verdict(p, v, small=0.1, medium=0.3, n=n, alpha=alpha)}
 
 
 # ---------------------------------------------------------------------------
@@ -279,13 +294,13 @@ def stability(df, x, y, n=5, seed=0, stat="auto"):
 # ---------------------------------------------------------------------------
 # optional confounder probe: re-run the test inside the largest --by stratum
 # ---------------------------------------------------------------------------
-def _within_by(df, by, test, x, y):
+def _within_by(df, by, test, x, y, alpha=0.05):
     biggest = df[by].value_counts(dropna=True)
     if biggest.empty:
         return {"by": by, "error": "no non-null values in confounder column"}
     level = biggest.index[0]
     sub = df[df[by] == level]
-    res = TESTS[test](sub, x, y)
+    res = TESTS[test](sub, x, y, alpha=alpha)
     return {"by": by, "held_at": str(level), "n_in_stratum": int(len(sub)),
             "result": res,
             "note": "re-ran the test holding the confounder roughly fixed; "
@@ -304,6 +319,11 @@ def main():
     ap.add_argument("--y", required=True, help="Second column (outcome / numeric for corr/group/anova).")
     ap.add_argument("--by", default=None, help="Optional confounder column to stratify on.")
     ap.add_argument("--splits", type=int, default=5, help="Random splits for the stability check.")
+    ap.add_argument("--alpha", type=float, default=0.05, help="Base significance level before correction.")
+    ap.add_argument("--family-size", type=int, default=1,
+                    help="Number of tests in this family. Bonferroni-corrects the threshold to "
+                         "alpha/family-size (guards against false positives when many findings are "
+                         "tested together; FDR is a less conservative alternative, not implemented).")
     ap.add_argument("--sheet", default=None, help="Excel sheet name (optional).")
     a = ap.parse_args()
 
@@ -327,11 +347,15 @@ def main():
             eprint(f"ERROR: column not found: {col!r}. Available: {list(df.columns)}")
             sys.exit(4)
 
+    alpha = a.alpha / max(1, a.family_size)
     try:
-        result = TESTS[a.test](df, a.x, a.y)
+        result = TESTS[a.test](df, a.x, a.y, alpha=alpha)
+        result["significance"] = {"alpha_base": a.alpha, "family_size": a.family_size,
+                                  "alpha_used": alpha,
+                                  "correction": "bonferroni" if a.family_size > 1 else "none"}
         result["stability"] = stability(df, a.x, a.y, n=a.splits)
         if a.by:
-            result["confounder_check"] = _within_by(df, a.by, a.test, a.x, a.y)
+            result["confounder_check"] = _within_by(df, a.by, a.test, a.x, a.y, alpha=alpha)
     except Exception as e:
         eprint(f"ERROR running {a.test}: {type(e).__name__}: {e}")
         sys.exit(5)

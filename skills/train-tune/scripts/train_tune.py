@@ -91,7 +91,28 @@ def reg_metrics(y, pred):
 
 
 def fmt(v):
-    return f"{v:,.4g}"
+    return "n/a" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{v:,.4g}"
+
+
+def enforce_test_lock(splits_dir, eval_on, allow_test, consumer):
+    """Mechanical guardrail (kept byte-identical across baseline/train-tune — must not drift):
+    the test split may be scored EXACTLY ONCE, at the very end, and only with explicit
+    --allow-test — never for tuning/selection. Writes a one-time lock so a second test
+    evaluation is refused (delete the lock file to deliberately override)."""
+    if eval_on != "test":
+        return
+    if not allow_test:
+        raise SystemExit(
+            "Refusing --eval-on test without --allow-test. The test split must be touched EXACTLY "
+            "ONCE, after the model is locked (never for tuning/selection). If this is that final "
+            "locked estimate, re-run with --allow-test.")
+    lock = os.path.join(splits_dir, ".test_consumed.json")
+    if os.path.exists(lock):
+        raise SystemExit(
+            f"Test split already consumed once (see {lock}). Touching it again invalidates the "
+            "held-out estimate — re-split for a fresh test, or delete that file to override deliberately.")
+    with open(lock, "w") as f:
+        json.dump({"consumer": consumer, "eval_on": eval_on}, f, indent=2)
 # -------------------------------------------------------------------------------
 
 LOWER_BETTER = {"mae", "rmse", "mape"}
@@ -223,6 +244,8 @@ def main():
     p.add_argument("--cv", type=int, default=5)
     p.add_argument("--scoring", default="auto")
     p.add_argument("--eval-on", choices=["val", "test"], default="val")
+    p.add_argument("--allow-test", action="store_true",
+                   help="confirm a one-time terminal evaluation on the test split (required for --eval-on test)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--out-dir", default=None)
     args = p.parse_args()
@@ -230,6 +253,7 @@ def main():
     if any(h in args.model.lower() for h in DL_RL_HINTS):
         raise SystemExit("train-tune is TABULAR-only (scikit-learn + gradient boosting). "
                          "Deep learning / neural nets belong to a different track; sequential-reward problems are RL — both out of scope.")
+    enforce_test_lock(args.splits_dir, args.eval_on, args.allow_test, "train-tune")
 
     set_seed(args.seed)
     train_path, dev_path = find_split(args.splits_dir, "train"), find_split(args.splits_dir, args.eval_on)
