@@ -29,16 +29,13 @@ def load(path):
 
 def find_split(splits_dir, name):
     for f in os.listdir(splits_dir):
-        stem = os.path.splitext(f)[0].lower()
-        if stem == name:
+        if os.path.splitext(f)[0].lower() == name:
             return os.path.join(splits_dir, f)
     raise SystemExit(f"Could not find '{name}.*' in {splits_dir}")
 
 
 def infer_task(y):
-    # fractional float values are always regression — guard BEFORE the cardinality check
-    # so low-cardinality ratings/scores/prices aren't misrouted to classification (which
-    # then crashes the classification metrics on a continuous target).
+    # fractional float values are always regression (kept identical across all scripts)
     if pd.api.types.is_float_dtype(y) and not np.all(np.mod(y.dropna(), 1) == 0):
         return "regression"
     nun = y.nunique(dropna=True)
@@ -58,8 +55,7 @@ def build_preprocessor(X):
     num_pipe = Pipeline([("imp", SimpleImputer(strategy="median")), ("sc", StandardScaler())])
     cat_pipe = Pipeline([
         ("imp", SimpleImputer(strategy="most_frequent")),
-        # sparse_output=False keeps this preprocessor reusable by tree models (e.g.
-        # HistGradientBoosting in train-tune) which reject sparse X; linear models are fine either way
+        # sparse_output=False: HistGradientBoosting & other tree models reject sparse X
         ("oh", OneHotEncoder(handle_unknown="ignore", max_categories=20, sparse_output=False)),
     ])
     return ColumnTransformer([("num", num_pipe, num), ("cat", cat_pipe, cat)])
@@ -88,7 +84,28 @@ def reg_metrics(y, pred):
 
 
 def fmt(v):
-    return f"{v:,.4g}"
+    return "n/a" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{v:,.4g}"
+
+
+def enforce_test_lock(splits_dir, eval_on, allow_test, consumer):
+    """Mechanical guardrail (kept byte-identical across baseline/train-tune — must not drift):
+    the test split may be scored EXACTLY ONCE, at the very end, and only with explicit
+    --allow-test — never for tuning/selection. Writes a one-time lock so a second test
+    evaluation is refused (delete the lock file to deliberately override)."""
+    if eval_on != "test":
+        return
+    if not allow_test:
+        raise SystemExit(
+            "Refusing --eval-on test without --allow-test. The test split must be touched EXACTLY "
+            "ONCE, after the model is locked (never for tuning/selection). If this is that final "
+            "locked estimate, re-run with --allow-test.")
+    lock = os.path.join(splits_dir, ".test_consumed.json")
+    if os.path.exists(lock):
+        raise SystemExit(
+            f"Test split already consumed once (see {lock}). Touching it again invalidates the "
+            "held-out estimate — re-split for a fresh test, or delete that file to override deliberately.")
+    with open(lock, "w") as f:
+        json.dump({"consumer": consumer, "eval_on": eval_on}, f, indent=2)
 
 
 def main():
@@ -97,9 +114,12 @@ def main():
     p.add_argument("--target", required=True)
     p.add_argument("--task", choices=["auto", "classification", "regression"], default="auto")
     p.add_argument("--eval-on", choices=["val", "test"], default="val")
+    p.add_argument("--allow-test", action="store_true",
+                   help="confirm a one-time terminal evaluation on the test split (required for --eval-on test)")
     p.add_argument("--out-dir", default=None)
     args = p.parse_args()
 
+    enforce_test_lock(args.splits_dir, args.eval_on, args.allow_test, "baseline")
     train = load(find_split(args.splits_dir, "train"))
     dev = load(find_split(args.splits_dir, args.eval_on))
     args.out_dir = args.out_dir or os.path.join(args.splits_dir, "baseline")

@@ -67,7 +67,7 @@ flowchart LR
    **⏸ CHECKPOINT 5 — deploy-readiness gate.** Present the readiness audit + the honest list of what can't be verified offline (serving, live monitoring, business impact). The deploy decision is the human's.
 
 ## The final test-set estimate
-The single legitimate use of `test` is one terminal measurement after the model is locked. This discipline is **operator-enforced — the tooling does NOT gate it** (`train-tune --eval-on test` will silently score on test with no warning), so it is on you: only after CHECKPOINT 4 approval (model chosen), run the terminal estimate **once** as a separate explicit invocation, report it as the unbiased number, and never re-run it to compare candidates.
+The single legitimate use of `test` is one terminal measurement after the model is locked, and the tooling now **mechanically enforces** it: `--eval-on test` is refused unless you also pass `--allow-test`, and a one-time lock (`.test_consumed.json` in the splits dir) refuses a second test evaluation. So only after CHECKPOINT 4 approval (model chosen), run the terminal estimate **once** with `--allow-test`, report it as the unbiased number, and never use test to compare candidates. (To deliberately redo it, delete the lock file — an explicit act, not an accident.)
 
 ## Handoff
 At each checkpoint and at the end, report concisely: the stage done, artifacts written (paths), the decision needed (or final deliverable), the current number-to-beat vs. tuned metric, and what was intentionally left out and why (e.g. "online performance not measured — offline only").

@@ -17,7 +17,7 @@ Bounded to **tabular** models (scikit-learn + optional gradient-boosting libs). 
 
 ## Contract (important)
 - **Leakage is non-negotiable.** The preprocessor (impute → scale → one-hot) lives inside the Pipeline that `RandomizedSearchCV` wraps, so every transformer refits on each CV training fold only. The search never sees val or test. (scikit-learn Common Pitfalls; Cawley & Talbot 2010.)
-- **CV runs on train only.** val is held out for the honest comparison; test is never touched (`--eval-on test` is gated behind a warning — touch it once, at the very end, via evaluate-model).
+- **CV runs on train only.** val is held out for the honest comparison; test is **mechanically locked** — `--eval-on test` is refused without `--allow-test`, and a one-time `.test_consumed.json` lock refuses a second test evaluation. Touch test once, at the very end, on the locked model.
 - **Honest about the CV number.** `best_score_` is the model-*selection* score and is optimistically biased; the report leads with the val number and labels the CV score as biased. Reported in the metric's natural sign (neg-scorers negated back).
 - **Tuned model must earn its keep.** The report shows tuned vs baseline (direction-aware) and says plainly whether it beat the bar and by how much (Google Rules of ML #4).
 - **Tabular only.** sklearn-native + gradient boosting (`gbt` always; `xgb`/`lgbm`/`catboost` if importable, else falls back to `gbt` with a note). DL / GPU / RL refused.

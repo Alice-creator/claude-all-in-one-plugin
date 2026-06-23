@@ -13,3 +13,6 @@ problem_framing_brief.md
 *_splits/
 # local Claude Code state (permission grants etc., not plugin content)
 .claude/
+# downloaded datasets + library training logs
+*.zip
+catboost_info/
