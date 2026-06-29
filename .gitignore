@@ -13,6 +13,15 @@ problem_framing_brief.md
 *_splits/
 # local Claude Code state (permission grants etc., not plugin content)
 .claude/
+# personal research working files (keep interests.example.json; your own config/notes are yours)
+research/interests.json
+research/scimagojr.csv
+research/candidates/
+research/notes/
+research/index.md
+research/index.json
+research/recall.md
+research/recall_log.json
 # downloaded datasets + library training logs
 *.zip
 catboost_info/

@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy to research/interests.json and edit. Used by the paper-researcher agent and the weekly routine. Only interests.json (not your notes) needs committing if you run the Cloud Routine.",
+  "keywords": [
+    "graph neural networks",
+    "retrieval augmented generation",
+    "tabular deep learning"
+  ],
+  "from_year": 2023,
+  "min_cites_per_year": 5,
+  "require": "either",
+  "scimago_csv": "research/scimagojr.csv",
+  "mailto": "you@example.com",
+  "own_work": "Describe your projects/interests in 2-4 sentences so the agent can judge a paper's relevance to YOU — e.g. 'I build tabular ML pipelines for churn and pricing at a fintech; I care about leakage-safe evaluation, calibration, and model monitoring; less interested in pure NLP/vision unless it transfers to tabular.'"
+}
