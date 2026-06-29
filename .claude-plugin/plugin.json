@@ -6,7 +6,7 @@
   "author": { "name": "Alice-creator" },
   "repository": "https://github.com/Alice-creator/claude-all-in-one-plugin",
   "license": "MIT",
-  "keywords": ["data-analysis", "data-cleaning", "eda", "profiling", "pandas", "machine-learning", "tabular-ml", "scikit-learn", "model-evaluation", "drift", "clean-code", "code-quality"],
+  "keywords": ["data-analysis", "data-cleaning", "eda", "profiling", "pandas", "machine-learning", "tabular-ml", "scikit-learn", "model-evaluation", "drift", "research", "papers", "arxiv", "openalex", "literature-review", "clean-code", "code-quality"],
   "skills": "./skills/",
   "agents": "./agents/",
   "hooks": "./hooks/hooks.json"

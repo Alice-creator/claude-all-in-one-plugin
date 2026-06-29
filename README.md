@@ -19,6 +19,10 @@ flowchart TB
         direction TB
         MLF["frame-ml-problem → split-dataset → baseline → select-model →<br/>train-tune → evaluate-model → check-drift · readiness-check"]
     end
+    subgraph RP["📖 Research — conductor: paper-researcher"]
+        direction TB
+        RPF["discover-papers → (pick) → digest-paper → link-notes"]
+    end
     subgraph CQ["📐 Code quality — reactive, no conductor"]
         direction TB
         HK(["hook: clean-code-reminder<br/>PostToolUse · Write|Edit|MultiEdit"]) --> CCS["clean-code (skill)"]
@@ -35,6 +39,7 @@ A conductor *owns a lifecycle*; a specialist *owns a stage*. Skills are reusable
 |-------|------|--------|
 | `model-builder` | conductor — **modeling** | `frame-ml-problem` · `split-dataset` · `baseline` · `select-model` · `train-tune` · `evaluate-model` · `check-drift` · `readiness-check` |
 | `data-analyst` | conductor — **analysis** | `profile-dataset` · `clean-data` · `eda` · `build-chart` · `query-sql` · `transform-data` · `report` · `cleaning-report` (delegates validation to `verify-analysis`, modeling to `model-builder`) |
+| `paper-researcher` | conductor — **research / paper-reading** | `discover-papers` · `digest-paper` · `link-notes` (finds Q1/high-impact papers, reads deeply, judges relevance, answers questions with web fallback, files linked notes + recall) |
 | `data-cleaner` | specialist — iterative cleaning loop | `profile-dataset` · `cleaning-report` (does the cleaning itself per `clean-data`'s approach, via generated per-round scripts) |
 | `eda-analyst` | specialist — exploratory analysis | `eda` |
 | `verify-analysis` | specialist — statistical validation | bundled `stat_tests.py` (corr / group / anova / chi2; no slash-skill) |
@@ -70,6 +75,14 @@ Both conductors **stop at checkpoints** (the human keeps the judgment calls), **
 | `cleaning-report` | Render a cleaning run log (`cleaning_run.json`) into a Mermaid-diagram Markdown report. |
 | `report` | Assemble the final `report.md` from **validated** findings (with verdicts). |
 
+**Research** (the `paper-researcher` pipeline — a weekly paper-reading habit):
+
+| Skill | What it does |
+|-------|--------------|
+| `discover-papers` | **DISCOVER** — keyword → ranked shortlist of **Q1-journal or high-impact** papers via the free OpenAlex API; true-Q1 labels when you supply a Scimago table, else impact-only (citations/year), and it says which. Writes a Mermaid-led shortlist + JSON sidecar. |
+| `digest-paper` | **DIGEST** — reads one paper with Keshav's **three-pass method**, scaffolds a structured literature note (core claim · method · results · limitations · relevance-to-your-work) with bibliographic fields pre-filled, and authors a **self-contained HTML mechanism explainer** (for visual learners) + active-recall prompts. |
+| `link-notes` | **RETAIN & CONNECT** — builds a Map-of-Content `index.md` (Mermaid knowledge graph from `[[wikilinks]]`, Foam/Obsidian style) and runs a **spaced active-recall scheduler** over each note's prompts (because linked notes alone ≠ retention; retrieval practice is). |
+
 **Code quality:**
 
 | Skill | What it does |
@@ -87,6 +100,15 @@ The plugin ships **one** hook (declared in [`hooks/hooks.json`](hooks/hooks.json
 It's the lightweight third layer of the code-quality trio: a short nudge on every code edit (**hook**), the full ruleset one `/clean-code` call away (**skill**), and a deeper audit from the `clean-code-reviewer` (**agent**).
 
 > **Activation:** the hook ships with the plugin and fires once the plugin is installed. The author also keeps a machine-wide copy under `~/.claude/` (the hook in `~/.claude/settings.json` → `PostToolUse`) so it runs in **every** repo without installing the plugin. Running both at once in the same repo fires the reminder twice — keep only one source.
+
+## Weekly cadence (optional) — automating DISCOVER
+
+The research pipeline is **on-demand** by default (you run `paper-researcher` / `discover-papers` when you want). To make the *discovery* half a true weekly habit, drive it with a **Claude Code Cloud Routine** — it runs on Anthropic-managed cloud infrastructure, so it fires on schedule **even with your laptop closed**, and the cloud session can run the committed skills.
+
+- **What to schedule:** a weekly prompt like *"Run `discover-papers` for each keyword in `research/interests.json`, commit the shortlists, and open `research/recall.md` listing what's due for review."*
+- **Hard requirement — commit what it needs:** a Cloud Routine only sees what is committed to the repo's **default branch**. Commit `research/interests.json` (and the plugin's skills) — locally-installed-only skills and un-committed config are invisible to the cloud clone.
+- **Caveats (research preview):** Routines need a Pro/Max/Team/Enterprise plan with Claude Code on web; they have a 1-hour minimum interval and a daily run cap, and the API surface may change. If you can't use them, fall back to a Desktop scheduled task (needs the machine on) or a plain `cron` job invoking `discover.py`.
+- **DIGEST/RETAIN stay human-in-the-loop:** discovery can be automated, but reading the paper and writing the note from understanding is what builds retention — don't automate that away.
 
 ## Install
 
