@@ -1,6 +1,7 @@
 ---
 name: profile-dataset
 description: Profile a tabular data file (CSV/TSV/Excel/Parquet/JSON) — report shape, per-column types, missing values, duplicates, outliers, and data-quality issues. Read-only; never modifies the data. Use right after receiving an unfamiliar data file, before any analysis, or when results look wrong and you suspect the data.
+allowed-tools: Bash, Read, Glob
 ---
 
 # profile-dataset

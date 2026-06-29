@@ -1,6 +1,7 @@
 ---
 name: cleaning-report
 description: Render a data-cleaning run log (cleaning_run.json) into a Mermaid-diagram Markdown report that visualizes each iteration — what was profiled and what was edited. Used by the data-cleaner agent as its final step, or standalone to re-render a report from an existing run log.
+allowed-tools: Bash, Read, Glob
 ---
 
 # cleaning-report

@@ -1,6 +1,7 @@
 ---
 name: build-chart
 description: Build a single presentation-quality chart (PNG) from a tabular file for a final report or slide — bar, grouped-bar, line, hist, scatter, or box, with labels, title, top-N filtering, and mean/median/sum/count aggregation. Use when you need a polished, shareable figure to communicate a finding. For quick exploratory plots inside a notebook use the `eda` skill instead.
+allowed-tools: Bash, Read, Glob
 ---
 
 # build-chart

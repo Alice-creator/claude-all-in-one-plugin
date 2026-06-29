@@ -33,7 +33,7 @@ Use the project venv `.venv/bin/python` for all pandas/stats/notebook steps. Cre
 
 4. **Validate** — for each chosen finding, follow `verify-analysis`:
    `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/verify-analysis/scripts/stat_tests.py" <file> --test corr|group|anova|chi2 --x .. --y .. [--by confounder]`
-   Keep only `confirmed`/`weak`; drop `refuted`; re-test `inconclusive` with the right test. Record each verdict + evidence.
+   Carry findings forward by tier, matching how `report` files them: **`confirmed` → conclusions** (Key findings), **`weak` → suggestive** (kept but reported as "not a conclusion"), **`refuted` → drop**, **`inconclusive` → re-test** with the right test. Record each verdict + evidence. Do NOT let a `weak` finding become a headline claim.
 
 5. **Visualize / shape** — for the validated findings, use `build-chart` (`chart.py`) for presentation charts, and `query-sql` (`run_sql.py`) or `transform-data` for the specific cuts/aggregations the answer needs.
    **⏸ CHECKPOINT 3 — what to claim.** Present the validated findings + charts and the claims you intend to make. STOP for approval (this guards against over-claiming).
@@ -41,7 +41,7 @@ Use the project venv `.venv/bin/python` for all pandas/stats/notebook steps. Cre
 6. **Report** — follow the `report` skill (`build_report.py`) to assemble `report.md`: executive summary, only the approved validated findings (with confidence), the charts, a Mermaid pipeline diagram, method & data lineage, and explicit caveats (kept outliers, what wasn't validated, assumptions).
 
 ## Branch: modeling instead of reporting
-If the goal is a predictive model rather than insight, stop after EDA and hand off to the ML skills (`frame-ml-problem` → `split-dataset` → `baseline` → `evaluate-model`) instead of steps 4–6.
+If the goal is a predictive model rather than insight, stop after EDA and **hand off to the `model-builder` agent**, which owns the full modeling lifecycle — `frame-ml-problem` → `split-dataset` → `baseline` → `select-model` → `train-tune` → `evaluate-model` → `check-drift` / `readiness-check` — with the leakage and test-lock disciplines enforced. Don't run a truncated chain yourself (e.g. baseline straight to evaluate skips model selection and tuning, so you'd be evaluating an untuned floor). Pass forward the clean-file path and the intended target/task.
 
 ## Handoff
 At each checkpoint and at the end, report concisely: the stage done, artifacts written (paths), the decision needed (or final deliverable), and what was intentionally left out and why.

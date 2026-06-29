@@ -6,7 +6,7 @@
     {
       "name": "claude-all-in-one-plugin",
       "source": "./",
-      "description": "Data-analysis skills (dataset profiling and cleaning) — first domain of the all-in-one plugin."
+      "description": "Two end-to-end pipelines — data analysis and leakage-safe tabular ML modeling — plus a code-quality layer, as conductor agents driving bounded, honest skills."
     }
   ]
 }

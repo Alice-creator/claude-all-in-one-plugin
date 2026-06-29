@@ -1,6 +1,7 @@
 ---
 name: eda
 description: Run exploratory data analysis (EDA) on a CLEAN tabular file and produce an executed Jupyter notebook (.ipynb) — distributions, correlations, categorical breakdowns, and (optionally) what relates to a target column. Use after the data is clean, when the question is "what does this data tell me?". For deeper, iterative, question-driven exploration use the data-analyst / eda-analyst agent instead.
+allowed-tools: Bash, Read, Edit, Glob
 ---
 
 # eda

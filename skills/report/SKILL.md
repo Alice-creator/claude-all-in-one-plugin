@@ -1,6 +1,7 @@
 ---
 name: report
-description: Assemble the FINAL analysis deliverable — a structured `report.md` (optionally an `.ipynb`) from VALIDATED findings (with verdicts from verify-analysis), chart PNGs (from build-chart), and explicit caveats. Composes: executive summary, key findings (validated only, each with confidence/verdict), supporting charts + a Mermaid pipeline diagram, method & data lineage, and caveats/limitations. Use as the LAST step of an analysis to communicate results. Cardinal rule: NEVER presents unvalidated EDA patterns as conclusions.
+description: Assemble the FINAL analysis deliverable — a structured `report.md` (optionally an `.ipynb`) from VALIDATED findings (with verdicts from verify-analysis), chart PNGs (from build-chart), and explicit caveats. Composes — executive summary, key findings (validated only, each with confidence/verdict), supporting charts + a Mermaid pipeline diagram, method & data lineage, and caveats/limitations. Use as the LAST step of an analysis to communicate results. Cardinal rule — NEVER presents unvalidated EDA patterns as conclusions.
+allowed-tools: Bash, Read, Write, Glob
 ---
 
 # report
@@ -11,10 +12,11 @@ The mechanical assembly is a deterministic script (`build_report.py`) that takes
 
 ## Cardinal rule
 
-**Never present an unvalidated EDA pattern as a conclusion.** A correlation you spotted in a chart is a *hypothesis* until `verify-analysis` returns a verdict. In the report:
-- A finding goes in **Key findings** only if its verdict is validated (supported / confirmed / validated).
-- Anything refuted, inconclusive, or never verified is **demoted to Caveats** — explored, not concluded.
-- The script enforces this gate so it can't be skipped by accident; `--strict` makes a missing verdict a hard error.
+**Never present an unvalidated EDA pattern as a conclusion.** A correlation you spotted in a chart is a *hypothesis* until `verify-analysis` returns a verdict. The script sorts findings into three tiers (matching `verify-analysis`' vocabulary exactly) so nothing falls through a crack:
+- **Key findings** — verdict is validated (`supported` / `confirmed` / `validated`). These are the conclusions.
+- **Suggestive findings** — verdict is `weak` (significant but small/unstable). **Kept, but quarantined** in their own block and explicitly labelled "not conclusions" — so a `weak` finding is neither promoted nor silently dropped.
+- **Caveats** — `refuted`, `inconclusive`, never-verified, or missing-verdict. Explored, not concluded.
+- The script enforces this gate so it can't be skipped by accident; `--strict` makes a missing verdict a hard error. (Override the tier vocabularies with `--validated-verdicts` / `--weak-verdicts` if your pipeline uses different words.)
 
 ## When to use
 - The **last** step of an analysis: cleaning done, EDA done, findings re-checked by `verify-analysis`, charts rendered by `build-chart`.
@@ -39,9 +41,10 @@ The mechanical assembly is a deterministic script (`build_report.py`) that takes
 5. **Review & hand off** — open `report.md`, confirm the Key findings table shows only validated rows, the Mermaid pipeline matches what actually ran, charts resolve, and the Caveats are honest. Point the user at the file.
 
 ## Output structure (`report.md`)
+0. **At a glance** — opens the report (project hard rule): a `flowchart LR` Mermaid pipeline diagram + a one-line tally (validated / suggestive / explored).
 1. **Executive summary** — 2–4 plain sentences a busy reader can act on.
-2. **Key findings (validated only)** — table: finding · verdict · confidence · evidence.
-3. **Supporting charts** — embedded PNG links **plus** a `flowchart LR` Mermaid diagram of the analysis pipeline (visual-first).
+2. **Key findings (validated only)** — table: finding · verdict · confidence · evidence. Plus, if any, a **Suggestive findings (weak)** sub-block clearly marked "not conclusions".
+3. **Supporting charts** — embedded PNG links for validated + suggestive findings.
 4. **Method & data lineage** — how it was run + a source→clean→analysis trail.
 5. **Caveats & limitations** — kept outliers, assumptions, and every pattern that did *not* survive validation.
 

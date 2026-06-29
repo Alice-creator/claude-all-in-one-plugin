@@ -1,6 +1,7 @@
 ---
 name: query-sql
 description: Answer a question about a CSV/Parquet/JSON file by writing SQL and running it directly with DuckDB (no database server) — aggregations, filters, GROUP BY, JOINs, window functions. Reads the file in place as a table named `data`, prints the result. Read-only on the source. Use when the question is a lookup/count/aggregate/ranking ("how many...", "average X by Y", "top N..."), or when the file is large and a pandas load would be slow.
+allowed-tools: Bash, Read, Glob
 ---
 
 # query-sql
@@ -28,11 +29,11 @@ Turn a data question into a SQL query and run it **directly against a file** —
    .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/query-sql/scripts/run_sql.py" "<file>" "<SQL>" --limit 50
    ```
    - `--limit N` caps **printed** rows (default 50; `--limit 0` prints all). It does not alter your query — put `LIMIT` in the SQL if you want the query itself bounded.
-   - Exit 3 = query or load error (stderr shows the message; binder errors list candidate column names — fix the SQL and re-run). Exit 1 = file not found. Exit 2 = duckdb missing.
+   - Exit 3 = query or load error (stderr shows the message; binder errors list candidate column names — fix the SQL and re-run). Exit 1 = file not found. Exit 2 = duckdb missing. **Exit 4 = refused**: the SQL wasn't a single read-only statement (see below).
 4. **Interpret** — read the printed table and answer the user's question in words (don't just dump rows). State the numbers that matter and any caveat (e.g. nulls excluded by an aggregate, a filter that dropped most rows).
 
 ## Notes
-- **Read-only.** The connection is in-memory and ephemeral; the source file is never modified.
+- **Read-only — and enforced.** The connection is in-memory and ephemeral, and before running, the script parses your SQL with DuckDB's own parser and **refuses anything that isn't a single read-only statement** (SELECT / WITH-select / EXPLAIN / DESCRIBE / SHOW). Writes and side-effects — `COPY ... TO`, `INSERT`/`UPDATE`/`DELETE`, `ATTACH`, `INSTALL`/`LOAD`, `CREATE`/`DROP`, `SET`, multi-statement scripts — exit 4 and run nothing, so the source file and your disk are never modified. If you genuinely need to *write* a reshaped file, that's `transform-data`'s job, not this skill's.
 - DuckDB **infers types and delimiters** automatically (CSV sniffing, Parquet schema). If a column comes through as text when you expect a number, `CAST(col AS DOUBLE)` in the query.
 - Column names with spaces or punctuation must be **double-quoted** in SQL: `SELECT "Color intensity" FROM data`.
 - For repeated drill-downs on the same large file, **Parquet is much faster than CSV** (columnar, no re-parsing) — consider converting once via `transform-data` if you'll query it many times.
