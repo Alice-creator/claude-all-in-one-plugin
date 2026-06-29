@@ -206,6 +206,15 @@ def main():
     args.out_dir = args.out_dir or (base + "_splits")
     os.makedirs(args.out_dir, exist_ok=True)
 
+    # A fresh split produces a NEW test set, which invalidates any one-time test-consumption
+    # lock baseline/train-tune wrote against the OLD test set. Clear it so the new test split
+    # can legitimately be scored once — otherwise the guardrail wrongly refuses the first
+    # honest `--eval-on test` after a re-split.
+    stale_lock = os.path.join(args.out_dir, ".test_consumed.json")
+    cleared_lock = os.path.exists(stale_lock)
+    if cleared_lock:
+        os.remove(stale_lock)
+
     dup_n = int(df.duplicated().sum())
     if args.drop_duplicates and dup_n:
         df = df.drop_duplicates().reset_index(drop=True)
@@ -261,6 +270,8 @@ def main():
     print(f"  overlap: {'NONE ✅' if _disjoint(splits) else 'FOUND ❌'}")
     if method == "group":
         print(f"  group overlap: {'none ✅' if not group_overlap else str(group_overlap)+' ❌'}")
+    if cleared_lock:
+        print("  note: cleared a stale .test_consumed.json — fresh split, so test may be scored once again")
     print(f"  written → {args.out_dir}/ (train/val/test + split_report.md)")
 
 

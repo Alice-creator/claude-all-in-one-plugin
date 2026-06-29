@@ -8,9 +8,16 @@ pipeline, method/lineage, and explicit caveats. Emits a structured `report.md`
 
 CARDINAL RULE — enforced here, not just in prose: a finding is rendered in the
 "Key findings" section ONLY if its verdict is one of the validated verdicts
-(default: supported / confirmed / validated). Anything else (refuted, unverified,
-inconclusive, missing verdict) is moved to CAVEATS and never presented as a
-conclusion. Use --strict to hard-fail instead if any finding lacks a verdict.
+(default: supported / confirmed / validated). A `weak` verdict (significant but
+small/unstable effect from verify-analysis) is kept but quarantined in its OWN
+"Suggestive findings" block — reported for transparency, never as a conclusion.
+Everything else (refuted, unverified, inconclusive, missing verdict) is moved to
+CAVEATS. Use --strict to hard-fail instead if any finding lacks a verdict.
+
+Three tiers, so verify-analysis' vocabulary maps cleanly end-to-end:
+  validated (supported/confirmed/validated/pass) -> Key findings   (conclusions)
+  weak                                           -> Suggestive     (not conclusions)
+  refuted/inconclusive/unverified/missing        -> Caveats        (explored, dropped)
 
 This is pure stdlib (no pandas) — it only stitches text/links the caller already
 validated upstream. It NEVER touches source data.
@@ -56,6 +63,7 @@ import os
 import sys
 
 DEFAULT_VALIDATED = ("supported", "confirmed", "validated", "pass", "passed")
+DEFAULT_WEAK = ("weak",)  # verify-analysis' "significant but small/unstable" tier
 
 
 def eprint(*a, **k):
@@ -93,21 +101,35 @@ def pipeline_mermaid(steps):
     return out
 
 
-def build_markdown(d, validated):
+def build_markdown(d, validated, weak_verdicts):
     title = d.get("title", "Analysis report")
     dataset = d.get("dataset", "")
     findings = d.get("findings", []) or []
 
-    # Split findings by verdict — the cardinal-rule gate.
-    keep, demoted = [], []
+    # Split findings into three tiers — the cardinal-rule gate.
+    keep, weak, demoted = [], [], []
     for f in findings:
         v = str(f.get("verdict", "")).strip().lower()
-        (keep if v in validated else demoted).append(f)
+        if v in validated:
+            keep.append(f)
+        elif v in weak_verdicts:
+            weak.append(f)
+        else:
+            demoted.append(f)
 
     L = []
     L.append(f"# {title}\n")
     if dataset:
         L.append(f"_Dataset: `{dataset}` (read-only source — never modified)._\n")
+
+    # At a glance — visual-first: the pipeline diagram + a one-line tally (project hard rule:
+    # every report OPENS with `## At a glance` + a Mermaid block).
+    L.append("## At a glance\n")
+    L.extend(pipeline_mermaid(d.get("pipeline")))
+    L.append("")
+    L.append(f"**{len(keep)} validated finding(s)** · {len(weak)} suggestive (weak) · "
+             f"{len(demoted)} explored-but-not-validated. Only the validated set is presented "
+             "as conclusions.\n")
 
     # 1) Executive summary
     L.append("## 1. Executive summary\n")
@@ -116,8 +138,8 @@ def build_markdown(d, validated):
     # 2) Key findings — ONLY validated
     L.append("## 2. Key findings (validated only)\n")
     if keep:
-        L.append("> Every finding below carries a verdict from `verify-analysis`. "
-                 "Unvalidated patterns are intentionally excluded — see Caveats.\n")
+        L.append("> Every finding below carries a validated verdict from `verify-analysis`. "
+                 "Unvalidated patterns are intentionally excluded — see Suggestive / Caveats.\n")
         L.append("| # | Finding | Verdict | Confidence | Evidence |")
         L.append("|---|---|---|---|---|")
         for i, f in enumerate(keep, 1):
@@ -128,30 +150,43 @@ def build_markdown(d, validated):
         L.append("")
     else:
         L.append("> ⚠️ No findings passed validation. Nothing is presented as a conclusion. "
-                 "See Caveats for what was explored but not confirmed.\n")
+                 "See Suggestive / Caveats for what was explored but not confirmed.\n")
 
-    # 3) Supporting charts + pipeline diagram
+    # 2b) Suggestive (weak) findings — kept for transparency, NOT conclusions.
+    if weak:
+        L.append("### Suggestive findings (weak evidence — NOT conclusions)\n")
+        L.append("> These showed a *real but small or unstable* effect in `verify-analysis` "
+                 "(significant yet below the effect-size bar, or wobbly across splits). "
+                 "Reported so nothing is hidden — do **not** act on them as established facts.\n")
+        L.append("| # | Finding | Verdict | Confidence | Evidence |")
+        L.append("|---|---|---|---|---|")
+        for i, f in enumerate(weak, 1):
+            L.append(f"| {i} | {cell(f.get('claim', ''))} "
+                     f"| ⚠️ {cell(f.get('verdict', 'weak'))} "
+                     f"| {cell(conf_badge(f.get('confidence')))} "
+                     f"| {cell(f.get('evidence', ''))} |")
+        L.append("")
+
+    # 3) Supporting charts
     L.append("## 3. Supporting charts\n")
     shown_any = False
-    for f in keep:
+    for f in keep + weak:
         for c in f.get("charts", []) or []:
             shown_any = True
             L.append(f"**{cell(f.get('claim', 'finding'))}**\n")
             L.append(f"![{esc(f.get('claim', 'chart'))}]({c})\n")
     for c in d.get("charts", []) or []:
-        shown_any = True
         path = c.get("path") if isinstance(c, dict) else c
         cap = c.get("caption", "") if isinstance(c, dict) else ""
+        if not path:
+            continue  # skip a malformed gallery entry rather than emit a broken ![](None) link
+        shown_any = True
         L.append(f"![{esc(cap or path)}]({path})")
         if cap:
             L.append(f"*{cell(cap)}*")
         L.append("")
     if not shown_any:
         L.append("_(no chart images supplied)_\n")
-
-    L.append("### Analysis pipeline\n")
-    L.extend(pipeline_mermaid(d.get("pipeline")))
-    L.append("")
 
     # 4) Method & data lineage
     L.append("## 4. Method & data lineage\n")
@@ -181,7 +216,7 @@ def build_markdown(d, validated):
         L.append("- _(none stated — confirm there really are no limitations before trusting this)_")
     L.append("")
 
-    return "\n".join(L), keep, demoted
+    return "\n".join(L), keep, weak, demoted
 
 
 def build_ipynb(markdown_text, title):
@@ -205,7 +240,9 @@ def main():
     ap.add_argument("--strict", action="store_true",
                     help="Hard-fail if any finding is missing a verdict.")
     ap.add_argument("--validated-verdicts", default=",".join(DEFAULT_VALIDATED),
-                    help="Comma list of verdicts that count as validated.")
+                    help="Comma list of verdicts that count as validated (-> Key findings).")
+    ap.add_argument("--weak-verdicts", default=",".join(DEFAULT_WEAK),
+                    help="Comma list of verdicts kept as suggestive-but-not-conclusions (-> Suggestive block).")
     a = ap.parse_args()
 
     if not os.path.exists(a.spec):
@@ -219,6 +256,7 @@ def main():
         sys.exit(3)
 
     validated = {v.strip().lower() for v in a.validated_verdicts.split(",") if v.strip()}
+    weak_verdicts = {v.strip().lower() for v in a.weak_verdicts.split(",") if v.strip()} - validated
 
     if a.strict:
         missing = [f.get("claim", "?") for f in (d.get("findings") or [])
@@ -230,7 +268,7 @@ def main():
             eprint("Run verify-analysis to assign verdicts, or drop the finding.")
             sys.exit(4)
 
-    md, keep, demoted = build_markdown(d, validated)
+    md, keep, weak, demoted = build_markdown(d, validated, weak_verdicts)
 
     with open(a.out, "w") as f:
         f.write(md)
@@ -240,9 +278,13 @@ def main():
         nb = build_ipynb(md, d.get("title", "Analysis report"))
         nbf.write(nb, a.ipynb)
 
-    print(f"Wrote {a.out}  (validated findings: {len(keep)}, demoted to caveats: {len(demoted)})")
+    print(f"Wrote {a.out}  (validated: {len(keep)}, suggestive/weak: {len(weak)}, "
+          f"demoted to caveats: {len(demoted)})")
     if a.ipynb:
         print(f"Wrote {a.ipynb}")
+    if weak:
+        print(f"NOTE: {len(weak)} weak finding(s) placed in 'Suggestive findings' — kept for "
+              f"transparency, NOT presented as conclusions.")
     if demoted:
         print(f"NOTE: {len(demoted)} unvalidated finding(s) were NOT presented as conclusions "
               f"(moved to Caveats).")

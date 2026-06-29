@@ -42,25 +42,16 @@ def main():
     res = d.get("result", {})
     gate = d.get("quality_gate", {})
 
+    loss = res.get("row_loss_pct")
+    loss_txt = f"{loss}" if isinstance(loss, (int, float)) else "?"
+
     L = []
     L.append(f"# 🧹 Data Cleaning Report — `{ds}`\n")
 
-    # --- Summary ---
-    L.append("## Summary\n")
-    L.append("| Field | Value |")
-    L.append("|---|---|")
-    L.append(f"| Source | `{ds}` (unchanged) |")
-    if out:
-        L.append(f"| Output | `{out}` |")
-    L.append(f"| Iterations | {len(iters)} |")
-    L.append(f"| Rows in → out | {fmt(res.get('rows_in'))} → {fmt(res.get('rows_out'))} "
-             f"({res.get('row_loss_pct', '?')}% removed) |")
-    L.append(f"| Quality gate | {'✅ PASSED' if res.get('gate_passed') else '⚠️ NOT MET'} |")
-    L.append(f"| Stopped because | {esc(res.get('stopped_because', '?'))} |")
-    L.append("")
-
-    # --- Iteration flow diagram ---
-    L.append("## Iteration flow\n")
+    # --- At a glance (project hard rule: open with `## At a glance` + a Mermaid block) ---
+    L.append("## At a glance\n")
+    L.append(f"**{len(iters)} round(s)** · {fmt(res.get('rows_in'))} → {fmt(res.get('rows_out'))} rows "
+             f"({loss_txt}% removed) · quality gate {'✅ PASSED' if res.get('gate_passed') else '⚠️ NOT MET'}.\n")
     L.append("```mermaid")
     L.append("flowchart LR")
     first_rows = iters[0].get("before", {}).get("rows") if iters else res.get("rows_in")
@@ -82,6 +73,20 @@ def main():
     L.append(f'    DONE["{gate_txt}<br/>{fmt(res.get("rows_out"))} rows"]')
     L.append(f"    {prev} --> DONE")
     L.append("```")
+    L.append("")
+
+    # --- Summary ---
+    L.append("## Summary\n")
+    L.append("| Field | Value |")
+    L.append("|---|---|")
+    L.append(f"| Source | `{ds}` (unchanged) |")
+    if out:
+        L.append(f"| Output | `{out}` |")
+    L.append(f"| Iterations | {len(iters)} |")
+    L.append(f"| Rows in → out | {fmt(res.get('rows_in'))} → {fmt(res.get('rows_out'))} "
+             f"({loss_txt}% removed) |")
+    L.append(f"| Quality gate | {'✅ PASSED' if res.get('gate_passed') else '⚠️ NOT MET'} |")
+    L.append(f"| Stopped because | {esc(res.get('stopped_because', '?'))} |")
     L.append("")
 
     # --- Per-round detail ---

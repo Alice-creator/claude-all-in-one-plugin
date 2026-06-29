@@ -1,6 +1,7 @@
 ---
 name: transform-data
 description: Reshape CLEAN tabular data into the exact shape a question needs — groupby + aggregate, pivot/melt (wide↔long), joins/merges, derived/computed columns, row filtering, and time resampling (daily→monthly). Generates a tailored pandas script, runs it with the project venv, and writes a NEW output file (parquet/csv) with before→after shapes. Use to prepare an analysis-ready table; NOT for fixing data defects (use clean-data) and NOT a SQL interface (use query-sql).
+allowed-tools: Bash, Read, Write, Glob
 ---
 
 # transform-data
