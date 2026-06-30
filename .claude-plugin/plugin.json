@@ -2,11 +2,11 @@
   "name": "claude-all-in-one-plugin",
   "displayName": "Claude All-in-One Plugin",
   "version": "0.1.0",
-  "description": "All-in-one Claude Code plugin: two end-to-end pipelines — data analysis (profile → clean → EDA → validate → report) and leakage-safe tabular ML modeling (frame → split → baseline → select → tune → evaluate → drift/readiness) — plus a reactive code-quality layer, driven by conductor agents that stop at human-decision checkpoints.",
+  "description": "All-in-one Claude Code plugin: end-to-end pipelines for data analysis (profile → clean → EDA → validate → report), leakage-safe tabular ML modeling (frame → split → baseline → select → tune → evaluate → drift/readiness), paper-reading research (discover → digest → link), Kaggle agent-competition building (frame → scaffold → baseline → self-play → profile), and authorized agent-security red-teaming (frame → scaffold → chains → eval → harden) — plus a reactive code-quality layer, driven by conductor agents that stop at human-decision checkpoints and stay honest about what offline tooling can't measure.",
   "author": { "name": "Alice-creator" },
   "repository": "https://github.com/Alice-creator/claude-all-in-one-plugin",
   "license": "MIT",
-  "keywords": ["data-analysis", "data-cleaning", "eda", "profiling", "pandas", "machine-learning", "tabular-ml", "scikit-learn", "model-evaluation", "drift", "research", "papers", "arxiv", "openalex", "literature-review", "clean-code", "code-quality"],
+  "keywords": ["data-analysis", "data-cleaning", "eda", "profiling", "pandas", "machine-learning", "tabular-ml", "scikit-learn", "model-evaluation", "drift", "research", "papers", "arxiv", "openalex", "literature-review", "clean-code", "code-quality", "kaggle", "simulation-competition", "kaggle-environments", "game-agent", "self-play", "reinforcement-learning", "agent-security", "prompt-injection", "red-teaming", "agentdojo"],
   "skills": "./skills/",
   "agents": "./agents/",
   "hooks": "./hooks/hooks.json"

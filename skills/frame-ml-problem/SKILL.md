@@ -37,6 +37,7 @@ Work through these as a conversation. Ask the questions, push back on vague answ
 
 3. **Define the model's goal & output.** Only if ML cleared the gate.
    - What exactly does the model predict/do? Name the **task type**: binary/multiclass classification, regression, ranking, recommendation, sequence/generation, sequential decision-making (→ RL), etc.
+   - **Handoff if the goal is an *agent*, not a model.** If the deliverable is something that *acts* — plays a game / competes on a Kaggle agent ladder, or is a tool-using agent to attack/defend — this tabular framing doesn't fit. Stop and hand off: a Kaggle "submit-an-agent" competition → `game-agent-builder`; red-teaming/hardening a tool-using agent → `agent-redteamer`. (`model-builder` stays tabular and refuses RL/agents.)
    - What is the concrete **output format** and how is it consumed (a score? a label? a ranked list? an action)? What threshold/decision turns the output into the product behavior?
 
 4. **Define SUCCESS METRICS (business) — separately from evaluation metrics.**

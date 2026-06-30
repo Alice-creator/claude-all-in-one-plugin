@@ -25,3 +25,28 @@ research/recall_log.json
 # downloaded datasets + library training logs
 *.zip
 catboost_info/
+# game-agent pipeline (generated bundles + agent_task / ladder / profile artifacts)
+*_submission/
+submission*.tar.gz
+agent_task.json
+agent_task_brief.md
+baseline_agent_metric.json
+baseline_agent_report.md
+ladder_summary.json
+ladder_report.md
+agent_profile.json
+agent_profile_report.md
+# agent-security pipeline (red-team artifacts — keep these local)
+redteam_task.json
+redteam_brief.md
+redteam_summary.json
+redteam_eval_report.md
+*_attack/
+attack_chains.json
+attack_chains_report.md
+hardening_summary.json
+hardening_report.md
+defended_target.py
+# ...but DO keep the skill TEMPLATES that share a generated-artifact filename
+!skills/*/templates/agent_task.json
+!skills/*/templates/redteam_task.json

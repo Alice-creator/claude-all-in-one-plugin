@@ -1,0 +1,20 @@
+{
+  "_comment": "Filled by frame-agent-task from the competition's REAL rules/starter code. Read by scaffold-submission, baseline-agent, self-play-eval. Do not hardcode env_id from the competition title — confirm it. Mark anything unverified in unknowns[].",
+  "competition": "<competition name>",
+  "url": "<competition url>",
+  "runtime": "kaggle_environments | custom | unknown",
+  "env_id": "<e.g. cabt, orbit_wars, connectx — or null if custom/unknown>",
+  "obs_fields": ["<fields the observation carries>"],
+  "action_space": "<e.g. action_index, [from_planet_id, angle_radians, num_ships], deck_of_60_ids>",
+  "legal_move_field": "<where legal actions live in obs, e.g. obs.legal_actions — or null>",
+  "timeout": {
+    "model": "episode | per_move",
+    "budget_ms": 2000,
+    "overage_ms": 0
+  },
+  "daily_submission_cap": null,
+  "scoring": "TrueSkill | ELO | unknown",
+  "approach_gate": "scripted | search | rl",
+  "unknowns": ["<each fact you could not verify from a source>"],
+  "notes": ""
+}
