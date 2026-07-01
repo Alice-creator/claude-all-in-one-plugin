@@ -29,7 +29,10 @@ import csv
 import datetime
 import json
 import os
+import socket
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -40,11 +43,38 @@ def eprint(*a, **k):
     print(*a, file=sys.stderr, **k)
 
 
+def http_get_bytes(url, headers, timeout=15, tries=3):
+    """GET with retry: exponential backoff + Retry-After on 429/5xx and transient network errors
+    (connection failures AND read timeouts). OpenAlex/arXiv 503s are routine and the weekly routine
+    must survive them; the modest timeout/tries keep worst-case latency bounded (~timeout*tries on a
+    dead endpoint) so interactive use isn't punished. Byte-identical across the research scripts
+    (enforced by tests/check_helpers_synced.py)."""
+    last = None
+    for attempt in range(tries):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
+                raise
+            ra = e.headers.get("Retry-After") if e.headers else None
+            delay = float(ra) if (ra and str(ra).strip().isdigit()) else min(2 ** attempt, 30)
+        except (urllib.error.URLError, socket.timeout) as e:
+            last = e
+            if attempt == tries - 1:
+                raise
+            delay = min(2 ** attempt, 30)
+        time.sleep(delay)
+    if last is not None:
+        raise last
+    raise RuntimeError("http_get_bytes: tries must be >= 1")
+
+
 def http_get_json(url, mailto):
     # OpenAlex asks for a mailto for the polite pool; harmless if absent.
-    req = urllib.request.Request(url, headers={"User-Agent": f"paper-curator/0.1 (mailto:{mailto})"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())
+    return json.loads(http_get_bytes(url, {"User-Agent": f"paper-curator/0.1 (mailto:{mailto})"}))
 
 
 def reconstruct_abstract(inv):
@@ -145,6 +175,15 @@ def main():
     this_year = datetime.date.today().year
     issn_map, title_map = load_scimago(a.scimago)
     have_scimago = issn_map is not None
+
+    # Honesty guard: --require q1 is IMPOSSIBLE without a quartile table — say that, don't pretend
+    # it's merely an empty result set. Without Scimago every quartile is None, so nothing can match.
+    if a.require == "q1" and not have_scimago:
+        eprint("REFUSED: --require q1 needs a Scimago quartile table to know which journals are Q1, but "
+               "none was supplied (--scimago). Without it every paper's quartile is unknown, so NOTHING "
+               "can match — this is impossible, not merely empty. Download journalrank.csv from "
+               "https://www.scimagojr.com/journalrank.php and pass --scimago, or use --require either|impact.")
+        sys.exit(1)
 
     filters = ["type:article"]
     if a.from_year:

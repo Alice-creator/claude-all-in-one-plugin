@@ -65,6 +65,8 @@ GROUPS = [
              "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval"]),
     ("eprint", ["build-chart", "digest-paper", "discover-papers", "link-notes",
                 "profile-dataset", "query-sql", "report", "verify-analysis"]),
+    # research network fetch with retry/backoff (429/5xx + Retry-After) — must stay in sync
+    ("http_get_bytes", ["discover-papers", "digest-paper"]),
     # agent-security defense-in-depth scope gate (must refuse identically everywhere)
     ("enforce_authorized_scope", ["build-attack-chains", "scaffold-attack", "run-redteam-eval"]),
 ]

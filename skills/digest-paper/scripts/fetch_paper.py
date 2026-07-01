@@ -26,7 +26,10 @@ import datetime
 import json
 import os
 import re
+import socket
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -38,16 +41,41 @@ def eprint(*a, **k):
     print(*a, file=sys.stderr, **k)
 
 
+def http_get_bytes(url, headers, timeout=15, tries=3):
+    """GET with retry: exponential backoff + Retry-After on 429/5xx and transient network errors
+    (connection failures AND read timeouts). OpenAlex/arXiv 503s are routine and the weekly routine
+    must survive them; the modest timeout/tries keep worst-case latency bounded (~timeout*tries on a
+    dead endpoint) so interactive use isn't punished. Byte-identical across the research scripts
+    (enforced by tests/check_helpers_synced.py)."""
+    last = None
+    for attempt in range(tries):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
+                raise
+            ra = e.headers.get("Retry-After") if e.headers else None
+            delay = float(ra) if (ra and str(ra).strip().isdigit()) else min(2 ** attempt, 30)
+        except (urllib.error.URLError, socket.timeout) as e:
+            last = e
+            if attempt == tries - 1:
+                raise
+            delay = min(2 ** attempt, 30)
+        time.sleep(delay)
+    if last is not None:
+        raise last
+    raise RuntimeError("http_get_bytes: tries must be >= 1")
+
+
 def get_json(url, mailto):
-    req = urllib.request.Request(url, headers={"User-Agent": f"paper-curator/0.1 (mailto:{mailto})"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())
+    return json.loads(http_get_bytes(url, {"User-Agent": f"paper-curator/0.1 (mailto:{mailto})"}))
 
 
 def get_text(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "paper-curator/0.1"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.read().decode("utf-8", "replace")
+    return http_get_bytes(url, {"User-Agent": "paper-curator/0.1"}).decode("utf-8", "replace")
 
 
 def reconstruct_abstract(inv):
@@ -143,7 +171,7 @@ def unique_path(path):
     return f"{base}-{n}{ext}"
 
 
-def fill(template, meta, mech_html_name, quartile, tags):
+def fill(template, meta, mech_html_name, quartile, tags, html_escape=False):
     link = (f"https://doi.org/{meta['doi']}" if meta["doi"]
             else (f"https://arxiv.org/abs/{meta['arxiv']}" if meta["arxiv"] else meta["openalex"]))
     repl = {
@@ -153,6 +181,10 @@ def fill(template, meta, mech_html_name, quartile, tags):
         "TAGS": tags or "", "DATE": datetime.date.today().isoformat(),
         "MECHANISM_HTML": mech_html_name, "LINK": link,
     }
+    # HTML templates get the field values HTML-escaped (a title with & < > must not break the page
+    # or inject markup). The markdown note is left raw — escaping it would be wrong (mangles the text).
+    if html_escape:
+        repl = {k: str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") for k, v in repl.items()}
     out = template
     for k, v in repl.items():
         out = out.replace("{{" + k + "}}", v)
@@ -165,6 +197,9 @@ def main():
     p.add_argument("--title", help="resolve by title search instead of an id")
     p.add_argument("--quartile", default="", help="carry the quartile from discover-papers (e.g. Q1)")
     p.add_argument("--tags", default="", help="comma list of tags for the note frontmatter")
+    p.add_argument("--type", choices=["method", "survey", "benchmark", "analysis"], default="method",
+                   help="paper type → picks the visual archetype. survey uses the taxonomy/landscape "
+                        "template (a MAP of approaches); the others use the mechanism/pipeline template.")
     p.add_argument("--out-dir", default="research/notes")
     p.add_argument("--mailto", default="research@example.com")
     a = p.parse_args()
@@ -187,11 +222,13 @@ def main():
     mech_path = os.path.join(a.out_dir, mech_name)
 
     note_tpl = open(os.path.join(TEMPLATES, "literature-note.md")).read()
-    mech_tpl = open(os.path.join(TEMPLATES, "mechanism.html")).read()
+    # paper type picks the visual archetype: survey -> taxonomy/landscape map; else mechanism/pipeline.
+    archetype = "landscape.html" if a.type == "survey" else "mechanism.html"
+    mech_tpl = open(os.path.join(TEMPLATES, archetype)).read()
     with open(note_path, "w") as f:
-        f.write(fill(note_tpl, meta, mech_name, a.quartile, a.tags))
+        f.write(fill(note_tpl, meta, mech_name, a.quartile, a.tags))  # markdown — raw, no HTML escaping
     with open(mech_path, "w") as f:
-        f.write(fill(mech_tpl, meta, mech_name, a.quartile, a.tags))
+        f.write(fill(mech_tpl, meta, mech_name, a.quartile, a.tags, html_escape=True))  # HTML — escape & < >
 
     # machine-readable metadata for the agent (so it fills comprehension from real fields)
     print(json.dumps({
@@ -201,8 +238,11 @@ def main():
         "abstract": meta["abstract"],
         "note_path": note_path, "mechanism_path": mech_path,
     }, indent=2))
-    eprint(f"scaffolded → {note_path}\n              {mech_path}")
-    eprint("Next: read the paper (3-pass) and fill the comprehension fields + the HTML stages.")
+    eprint(f"scaffolded → {note_path}\n              {mech_path}  (archetype: {archetype})")
+    eprint("Next: read the paper (3-pass) and fill the comprehension fields + the diagram.")
+    if a.type == "method":
+        eprint("Tip: if this is actually a SURVEY/benchmark/analysis, re-run with --type survey (etc.) "
+               "for the right visual — a survey should be a MAP of approaches, not one pipeline.")
 
 
 if __name__ == "__main__":
