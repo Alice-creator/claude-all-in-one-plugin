@@ -6,7 +6,7 @@
     {
       "name": "claude-all-in-one-plugin",
       "source": "./",
-      "description": "Two end-to-end pipelines — data analysis and leakage-safe tabular ML modeling — plus a code-quality layer, as conductor agents driving bounded, honest skills."
+      "description": "End-to-end pipelines — data analysis, leakage-safe tabular ML modeling, paper-reading research, Kaggle agent-competition building, and authorized agent-security red-teaming — plus a code-quality layer, as conductor agents driving bounded, honest skills."
     }
   ]
 }

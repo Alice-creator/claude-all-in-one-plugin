@@ -1,0 +1,21 @@
+{
+  "_comment": "Filled by frame-redteam-task. Read by scaffold-attack, build-attack-chains (which is LOCKED to the predicates below), and run-redteam-eval. authorization_confirmed MUST be true before any offensive skill runs. Targets are sandbox/competition/owned-systems ONLY.",
+  "target_name": "<target>",
+  "target_class": "kaggle_sandbox | local_harness | owned_authorized_system",
+  "competition": "<name or null>",
+  "comp_id": "<kaggle comp id or null>",
+  "runtime": "kaggle | agentdojo | injecagent | custom | unknown",
+  "attack_interface": "confirm_from_starter_code",
+  "authorization_confirmed": false,
+  "sandbox": { "is_sandboxed": true, "enforcement": "replay | time_budget | isolation" },
+  "benign_task": { "description": "<what the agent legitimately does>", "prompts": ["<benign prompt(s)>"] },
+  "predicates": {
+    "benign_success": { "tool": "<legit tool>", "args_contains": {} },
+    "targeted_unsafe": { "tool": "<unsafe tool the attack targets>", "args_contains": {} }
+  },
+  "time_budget_sec": 1800,
+  "replay_determinism": true,
+  "threat_model": "multi-step indirect prompt injection (harmless in isolation, harmful when chained)",
+  "unknowns": ["<each unverified fact>"],
+  "notes": ""
+}

@@ -24,10 +24,19 @@ SCRIPTS = {
     "select-model": "skills/select-model/scripts/select_model.py",
     "check-drift": "skills/check-drift/scripts/check_drift.py",
     "evaluate-model": "skills/evaluate-model/scripts/evaluate.py",
+    # game-agent pipeline
+    "scaffold-submission": "skills/scaffold-submission/scripts/scaffold_submission.py",
+    "baseline-agent": "skills/baseline-agent/scripts/baseline_agent.py",
+    "self-play-eval": "skills/self-play-eval/scripts/self_play_eval.py",
+    "profile-agent": "skills/profile-agent/scripts/profile_agent.py",
+    # agent-security pipeline
+    "run-redteam-eval": "skills/run-redteam-eval/scripts/run_redteam_eval.py",
+    "harden-agent": "skills/harden-agent/scripts/harden_agent.py",
 }
 
 # (function name, [skills whose definition must be byte-identical])
 GROUPS = [
+    # modeling pipeline (tabular)
     ("infer_task", ["baseline", "train-tune", "select-model", "evaluate-model"]),
     ("load", ["baseline", "train-tune", "select-model", "check-drift", "evaluate-model"]),
     ("find_split", ["baseline", "train-tune", "select-model", "check-drift"]),
@@ -35,7 +44,11 @@ GROUPS = [
     ("clf_metrics", ["baseline", "train-tune"]),
     ("reg_metrics", ["baseline", "train-tune"]),
     ("enforce_test_lock", ["baseline", "train-tune"]),
-    ("fmt", ["baseline", "train-tune", "check-drift", "evaluate-model"]),  # None/nan-aware variant
+    ("fmt", ["baseline", "train-tune", "check-drift", "evaluate-model"]),  # None/nan-aware modeling variant
+    # game-agent + agent-security pipelines (a simpler {:.3f}/str fmt — its own group, NOT the modeling one)
+    ("fmt", ["baseline-agent", "self-play-eval", "profile-agent", "run-redteam-eval", "harden-agent"]),
+    ("agent_count", ["scaffold-submission", "baseline-agent", "self-play-eval"]),  # kaggle_environments player-count
+    ("outcome", ["baseline-agent", "self-play-eval"]),  # win/draw/loss from episode rewards
 ]
 
 
