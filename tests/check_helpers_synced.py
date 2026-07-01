@@ -32,6 +32,17 @@ SCRIPTS = {
     # agent-security pipeline
     "run-redteam-eval": "skills/run-redteam-eval/scripts/run_redteam_eval.py",
     "harden-agent": "skills/harden-agent/scripts/harden_agent.py",
+    "build-attack-chains": "skills/build-attack-chains/scripts/build_attack_chains.py",
+    "scaffold-attack": "skills/scaffold-attack/scripts/scaffold_attack.py",
+    # data / analysis / research scripts (share the eprint helper)
+    "build-chart": "skills/build-chart/scripts/chart.py",
+    "digest-paper": "skills/digest-paper/scripts/fetch_paper.py",
+    "discover-papers": "skills/discover-papers/scripts/discover.py",
+    "link-notes": "skills/link-notes/scripts/link_notes.py",
+    "profile-dataset": "skills/profile-dataset/scripts/profile.py",
+    "query-sql": "skills/query-sql/scripts/run_sql.py",
+    "report": "skills/report/scripts/build_report.py",
+    "verify-analysis": "skills/verify-analysis/scripts/stat_tests.py",
 }
 
 # (function name, [skills whose definition must be byte-identical])
@@ -49,6 +60,13 @@ GROUPS = [
     ("fmt", ["baseline-agent", "self-play-eval", "profile-agent", "run-redteam-eval", "harden-agent"]),
     ("agent_count", ["scaffold-submission", "baseline-agent", "self-play-eval"]),  # kaggle_environments player-count
     ("outcome", ["baseline-agent", "self-play-eval"]),  # win/draw/loss from episode rewards
+    # cross-pipeline utility helpers copied byte-identical
+    ("die", ["baseline-agent", "build-attack-chains", "harden-agent", "profile-agent",
+             "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval"]),
+    ("eprint", ["build-chart", "digest-paper", "discover-papers", "link-notes",
+                "profile-dataset", "query-sql", "report", "verify-analysis"]),
+    # agent-security defense-in-depth scope gate (must refuse identically everywhere)
+    ("enforce_authorized_scope", ["build-attack-chains", "scaffold-attack", "run-redteam-eval"]),
 ]
 
 

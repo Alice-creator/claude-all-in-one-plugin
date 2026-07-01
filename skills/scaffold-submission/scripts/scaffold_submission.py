@@ -43,8 +43,11 @@ MAIN_TEMPLATE = '''\
 Entry point: agent(obs, config). The framework also accepts agent(obs).
 
 SAFETY CONTRACT (do not remove):
-- Never crash: any exception in your policy -> a legal fallback move is returned.
-- Legal only: the chosen action is validated against the observation's legal set.
+- Never crash: any exception in your policy -> a fallback move is returned (this always holds).
+- Legal ONLY WHEN THE OBS EXPOSES THE LEGAL SET: the action is validated against a legal-action
+  list found via LEGAL_FIELD / a common key / an action_mask. If legality is IMPLICIT (e.g.
+  ConnectX: column c is legal iff board[c]==0), this wrapper CANNOT see it and the fallback may
+  be illegal -> derive the legal set from the obs inside _legal_actions() or your policy.
 - Time: a BEST-EFFORT cumulative guard. The competition env is the real enforcer; test on it.
 
 Fill the block marked `=== YOUR POLICY ===`. The default is random-legal (a runnable floor).
@@ -96,7 +99,7 @@ def _fallback(obs):
     la = _legal_actions(obs)
     if la:
         return la[0]
-    return 0  # last resort for index-action envs; fill TODO for structured-action envs
+    return 0  # last resort — MAY BE ILLEGAL if legality is implicit in the obs (see SAFETY CONTRACT)
 
 
 def _time_left_ms(obs):
@@ -178,9 +181,30 @@ def agent_count(env):
     return 2
 
 
-def smoke_test(out_dir, env_id):
-    """If kaggle_environments is installed and the env id is known, run ONE episode of
-    [main.py, 'random'] to confirm the bundle loads and returns legal actions."""
+def _probe_legality(main_path, env):
+    """Import the generated main.py and ask its _legal_actions() about a REAL observation. Returns
+    True if it yields a legal-action list, False if it returns None (legality is implicit in the obs
+    -> the fallback is BLIND and may play illegally), or None if it can't be probed. This is the
+    deterministic signal — episode luck can hide an illegal move, but this cannot."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("scaffolded_main", main_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        obs = env.steps[0][0].get("observation")
+        if obs is None:
+            return None
+        return mod._legal_actions(obs) is not None
+    except Exception:
+        return None
+
+
+def smoke_test(out_dir, env_id, episodes=10):
+    """Check the bundle loads, plays legal moves, AND that the wrapper can even SEE this env's
+    legality. Two signals: (1) run several UNSEEDED episodes of [main.py, 'random', ...] and count
+    forfeits (an implicit-legality env like ConnectX can look fine until a move late in the game is
+    illegal, and a lucky N-episode run can still miss it); (2) probe _legal_actions() on a real obs
+    — if it returns None the fallback is blind, so we flag it regardless of episode luck."""
     try:
         from kaggle_environments import make
     except Exception:
@@ -188,17 +212,34 @@ def smoke_test(out_dir, env_id):
     if not env_id or env_id == "unknown":
         return {"ran_locally": False, "reason": "env_id unknown — cannot smoke-test"}
     main_path = os.path.join(out_dir, "main.py")
-    try:
-        env = make(env_id, debug=True)
-        n = agent_count(env)
-        agents = [main_path] + ["random"] * (n - 1)
-        env.run(agents)
-        states = env.steps[-1]
-        statuses = [s.get("status") for s in states]
-        ok = all(st in ("ACTIVE", "DONE", "INACTIVE") for st in statuses)
-        return {"ran_locally": True, "final_statuses": statuses, "ok": ok}
-    except Exception as e:
-        return {"ran_locally": True, "ok": False, "error": f"{type(e).__name__}: {e}"}
+    illegal = timeouts = errored = ran = 0
+    first_error = None
+    legality_derivable = None  # True/False from _legal_actions on a real obs; None = couldn't probe
+    for i in range(max(1, episodes)):
+        try:
+            env = make(env_id, debug=False)  # UNSEEDED on purpose: natural variation surfaces more illegal states
+            n = agent_count(env)
+            env.run([main_path] + ["random"] * (n - 1))
+            ran += 1
+            status0 = env.steps[-1][0].get("status")  # OUR agent is slot 0
+            if status0 in ("INVALID", "ERROR"):
+                illegal += 1
+            elif status0 == "TIMEOUT":
+                timeouts += 1
+            if legality_derivable is None:
+                legality_derivable = _probe_legality(main_path, env)
+        except Exception as e:
+            errored += 1
+            if first_error is None:
+                first_error = f"{type(e).__name__}: {e}"
+    if ran == 0:
+        return {"ran_locally": True, "ok": False, "episodes_requested": episodes,
+                "error": first_error or "all episodes errored"}
+    legal_verified = (illegal == 0 and timeouts == 0 and errored == 0 and legality_derivable is True)
+    return {"ran_locally": True, "episodes": ran, "illegal_episodes": illegal,
+            "timeout_episodes": timeouts, "errored_episodes": errored,
+            "legality_derivable": legality_derivable, "legal_verified": legal_verified,
+            "ok": legal_verified, "error": first_error}
 
 
 def sha256_of(path):
@@ -216,6 +257,8 @@ def main():
     ap.add_argument("--policy", choices=["random_legal", "first_legal"], default="random_legal")
     ap.add_argument("--no-package", action="store_true", help="skip building submission.tar.gz")
     ap.add_argument("--force", action="store_true", help="overwrite an existing main.py")
+    ap.add_argument("--smoke-episodes", type=int, default=10,
+                    help="episodes to run in the local smoke test (more = better illegal-move detection)")
     args = ap.parse_args()
 
     task = load_task(args.task_json)
@@ -233,7 +276,7 @@ def main():
     with open(main_path, "w") as f:
         f.write(render_main(task, args.policy))
 
-    smoke = smoke_test(out_dir, env_id)
+    smoke = smoke_test(out_dir, env_id, args.smoke_episodes)
 
     tar_path = None
     if not args.no_package:
@@ -255,15 +298,41 @@ def main():
         "sha256_main": sha256_of(main_path),
         "ran_locally": smoke.get("ran_locally", False),
         "smoke": smoke,
-        "notes": "Scaffolds interface + safety wrapper only; default policy is random-legal. "
-                 "Structured-action envs need the marked TODO filled. Test on the competition's harness before submitting.",
+        "notes": "Scaffolds interface + safety wrapper only; default policy is random-legal. Legality is validated "
+                 "only when the obs exposes a legal-action set — implicit-legality envs (e.g. ConnectX) need a "
+                 "derived legal set (see the report). Structured-action envs need the marked TODO filled. "
+                 "Test on the competition's harness before submitting.",
     }
     with open(os.path.join(out_dir, "submission_manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2)
 
     # Human report (Mermaid-led, per house convention).
-    smoke_line = ("not run (kaggle_environments missing or env unknown)" if not smoke.get("ran_locally")
-                  else ("✅ ran, returned legal actions" if smoke.get("ok") else f"⚠️ ran but errored: {smoke.get('error') or smoke.get('final_statuses')}"))
+    if not smoke.get("ran_locally"):
+        smoke_line = f"not run — {smoke.get('reason', 'kaggle_environments missing or env unknown')}"
+        legal_status = "unverified"
+    elif smoke.get("legal_verified"):
+        smoke_line = f"✅ {smoke.get('episodes')} episodes vs random, no illegal moves, and the wrapper can see this env's legality (a strong check, not a proof)"
+        legal_status = "clean"
+    else:
+        bad = []
+        if smoke.get("illegal_episodes"): bad.append(f"{smoke['illegal_episodes']} illegal")
+        if smoke.get("timeout_episodes"): bad.append(f"{smoke['timeout_episodes']} timeout")
+        if smoke.get("errored_episodes"): bad.append(f"{smoke['errored_episodes']} errored")
+        eps = smoke.get("episodes") or smoke.get("episodes_requested")
+        if smoke.get("legality_derivable") is False:
+            forfeits = f"; {', '.join(bad)} of {eps} episodes already forfeited" if bad else ""
+            smoke_line = f"❌ this env's legality is IMPLICIT — `_legal_actions()` returns None on a real obs, so the fallback is BLIND{forfeits}"
+        else:
+            detail = ", ".join(bad) or (smoke.get("error") or "errored")
+            smoke_line = f"❌ {detail} of {eps} episodes — the bundle does NOT reliably play legal moves"
+        legal_status = "broken"
+
+    legal_bullet = {
+        "clean": "- ✅ Across the smoke episodes the agent **returned only legal moves** (legality is checked when the obs exposes a legal-action set — a strong check, not a proof).",
+        "unverified": "- ❓ Legality was **not verified locally** (install kaggle-environments / set env_id and re-run). The wrapper only guarantees a legal move when the obs exposes a legal-action set.",
+        "broken": "- ❌ The agent **plays illegal moves**: this env encodes legality **implicitly** (it is not a list in the observation), so the random-legal fallback can't see it. Set `legal_move_field` in agent_task.json if the obs exposes one, or derive the legal set from the obs inside `_legal_actions` / your policy. **Do not submit until the smoke test is clean.**",
+    }[legal_status]
+
     report = f"""# Submission scaffold — {env_id}
 
 ## At a glance
@@ -272,8 +341,8 @@ flowchart LR
     OBS["obs"] --> A["agent(obs, config)"]
     A --> TG["time guard<br/>{manifest['time_guard']['model']} {manifest['time_guard']['budget_ms']}ms"]
     TG --> POL["policy: {args.policy}"]
-    POL --> VAL["validate legal"]
-    VAL -->|illegal/exception| FB["first-legal fallback"]
+    POL --> VAL["validate legal (if obs exposes it)"]
+    VAL -->|illegal/exception| FB["fallback move"]
     VAL -->|ok| OUT["action"]
     FB --> OUT
 ```
@@ -282,13 +351,14 @@ flowchart LR
 **Local smoke test:** {smoke_line}
 
 ## What this is / isn't
-- ✅ A submittable bundle whose agent **never crashes** and **always returns a legal action** for index-style action spaces.
+- ✅ A submittable bundle whose agent **never crashes** (any exception falls back to a move).
+{legal_bullet}
 - ✅ A best-effort **cumulative** time guard (the competition env is the real enforcer — test there).
 - ⚠️ The default policy is **random-legal** — a floor, not a strategy. Replace the `=== YOUR POLICY ===` block.
 - ⚠️ **Structured-action envs** (Orbit Wars moves, deck selection) need the marked `TODO` filled before the agent plays meaningfully.
 
 ## Next
-→ `baseline-agent` (drop in a heuristic + measure it vs random, with a crash/timeout health check).
+→ `baseline-agent` (drop in a heuristic + measure it vs random, with a crash/timeout/illegal health check).
 """
     with open(os.path.join(out_dir, "submission_report.md"), "w") as f:
         f.write(report)
@@ -299,6 +369,9 @@ flowchart LR
     print(f"Local smoke test: {smoke_line}")
     if not smoke.get("ran_locally"):
         print("  (install kaggle-environments and re-run, or test on Kaggle, before trusting the bundle)")
+    elif not smoke.get("legal_verified"):
+        print("  WARNING: the bundle played illegal/late moves in the smoke test — this env likely encodes legality "
+              "implicitly. Do NOT submit until the smoke test is clean (see submission_report.md).", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,30 @@ def die(msg, code):
     sys.exit(code)
 
 
+def enforce_authorized_scope(task):
+    """Defense-in-depth scope gate (behind the conductor's one-time attestation): the offensive
+    skills REFUSE unless the target is an authorized sandbox / harness / owned system. Prose in the
+    SKILL is not enough — this puts the refusal in code. Refuses (exit 4) on a missing attestation,
+    a target_class outside the allowed set, or a named production product in target_name."""
+    allowed_classes = ("kaggle_sandbox", "local_harness", "owned_authorized_system")
+    named_products = ("chatgpt", "openai", "gpt-4", "gpt-3", "gpt4", "gemini", "bard", "claude",
+                      "anthropic", "copilot", "llama", "grok", "mistral", "perplexity", "deepseek", "qwen")
+    if not task.get("authorization_confirmed"):
+        die("REFUSED: authorization_confirmed is not true in redteam_task.json — the target must be an "
+            "authorized sandbox/competition/owned system, attested via frame-redteam-task, before any attack.", 4)
+    tclass = str(task.get("target_class") or "").strip().lower()
+    if tclass not in allowed_classes:
+        die(f"REFUSED: target_class must be exactly one of {allowed_classes} — got {task.get('target_class')!r}. "
+            "Only sandbox/competition/owned targets are in scope; set it in redteam_task.json via frame-redteam-task.", 4)
+    name = str(task.get("target_name") or "").lower()
+    hit = next((p for p in named_products if p in name), None)
+    if hit:
+        die(f"REFUSED: target_name {task.get('target_name')!r} looks like a production/real product ('{hit}'). "
+            "This pipeline is for authorized sandbox/competition/owned targets ONLY — never production systems, "
+            "named products, or other competitors. If this is your OWN sandboxed agent, rename it to drop the "
+            "product name.", 4)
+
+
 AUTH_HEADER = '''\
 # ============================================================================
 # AUTHORIZED RED-TEAM USE ONLY.
@@ -91,9 +115,7 @@ def main():
         die(f"{args.task_json} not found — run frame-redteam-task first.", 3)
     with open(args.task_json) as f:
         task = json.load(f)
-    if not task.get("authorization_confirmed"):
-        die("REFUSED: authorization_confirmed is not true in redteam_task.json. The target must be an authorized "
-            "sandbox/competition/owned system, attested via frame-redteam-task, before scaffolding an attack.", 4)
+    enforce_authorized_scope(task)
 
     target = (task.get("target_name") or "target").replace(" ", "_").lower()
     out_dir = args.out_dir or f"{target}_attack"
@@ -103,7 +125,7 @@ def main():
     if os.path.exists(attack_path) and not args.force:
         die(f"{attack_path} exists — pass --force to overwrite (it may hold your work).", 4)
 
-    comp_id = json.dumps(task.get("comp_id"))
+    comp_id = repr(task.get("comp_id"))  # a valid Python literal even when comp_id is None (json.dumps -> 'null' -> NameError)
     with open(attack_path, "w") as f:
         f.write(ATTACK_TEMPLATE.replace("%%COMP_ID%%", comp_id))
     with open(adapter_path, "w") as f:
