@@ -90,13 +90,19 @@ def main():
             env.run(slots)
             final = env.steps[-1]
             rewards = [s.get("reward") for s in final]
-            res = outcome(rewards, 0)
-            wins += res == "win"; draws += res == "draw"; losses += res == "loss"; unknown += res == "unknown"
             status0 = final[0].get("status")
+            # A forfeit by OUR agent (illegal move / timeout / engine error) is a LOSS, not an
+            # "unknown" outcome. Otherwise a broken agent's forfeits drop out of the win-rate
+            # denominator and it scores far higher than it deserves (and health can't see them).
             if status0 == "TIMEOUT":
                 timeouts += 1
+                res = "loss"
             elif status0 in ("INVALID", "ERROR"):
                 illegal += 1
+                res = "loss"
+            else:
+                res = outcome(rewards, 0)
+            wins += res == "win"; draws += res == "draw"; losses += res == "loss"; unknown += res == "unknown"
         except Exception as e:
             crashes += 1
             if i == 0:
@@ -105,7 +111,7 @@ def main():
     played = args.episodes
     decided = wins + draws + losses
     win_rate = wins / decided if decided else None
-    health = "PASS" if (crashes == 0 and timeouts == 0) else "FAIL"
+    health = "PASS" if (crashes == 0 and timeouts == 0 and illegal == 0) else "FAIL"
 
     if win_rate is None:
         rec = "inconclusive"
@@ -115,6 +121,9 @@ def main():
         rec = "iterate_heuristic_or_search"
     else:
         rec = "weak_vs_random_fix_first"
+    if health == "FAIL":
+        # A crashing/timing-out/illegal agent forfeits — the win rate above is moot until it's fixed.
+        rec = "fix_health_first"
 
     metric = {
         "agent_type": "scripted/heuristic (as written in the agent file)",
@@ -140,10 +149,11 @@ def main():
         "scripted_sufficient": "Scripted already wins most games vs random — scripted bots often beat RL under time limits, so weigh RL's training cost before reaching for it.",
         "iterate_heuristic_or_search": "Beats random but not decisively — iterate the heuristic or add lookahead/search before considering RL.",
         "weak_vs_random_fix_first": "Barely beats (or loses to) random — fix the heuristic/legal-action handling first; complexity won't rescue a broken policy.",
+        "fix_health_first": "The agent crashes, times out, or plays ILLEGAL moves — every one is a forfeit, so the win rate is moot. Fix the legal-fallback / time guard first; a policy that forfeits can't be rated on strategy.",
         "inconclusive": "Outcomes couldn't be read from rewards — check the env's reward field before trusting these numbers.",
     }[rec]
-    health_line = ("✅ no crashes or timeouts" if health == "PASS"
-                   else f"❌ {crashes} crashes / {timeouts} timeouts — FIX the legal-fallback before self-play")
+    health_line = ("✅ no crashes, timeouts, or illegal moves" if health == "PASS"
+                   else f"❌ {crashes} crashes / {timeouts} timeouts / {illegal} illegal moves — FIX the legal-fallback before self-play")
 
     report = f"""# Agent baseline — {env_id}
 
@@ -172,7 +182,7 @@ flowchart LR
     print(f"win rate {fmt(win_rate)} vs {args.opponent} over {played} episodes · health {health} · rec {rec}")
     print(f"wrote baseline_agent_metric.json + baseline_agent_report.md in {out_dir}/")
     if health == "FAIL":
-        print("HEALTH FAIL: crashes/timeouts present — fix before self-play-eval.", file=sys.stderr)
+        print("HEALTH FAIL: crashes/timeouts/illegal moves present — fix before self-play-eval.", file=sys.stderr)
 
 
 if __name__ == "__main__":

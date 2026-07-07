@@ -13,13 +13,13 @@ This skill measures whatever policy is in your agent file (the one `scaffold-sub
 ## When to use
 - After `scaffold-submission`, once you've written a heuristic into the agent's policy block (or to measure the random-legal floor itself).
 - Before any RL — get the scripted number so "better" has a reference.
-- To verify the agent is **healthy** (zero crashes/timeouts) before spending episodes on a self-play ladder.
+- To verify the agent is **healthy** (zero crashes/timeouts/illegal moves) before spending episodes on a self-play ladder.
 
 ## Contract (important)
 - **Runs real episodes; writes a metric + report.** Needs `kaggle_environments` (exit 2 if missing). Never edits the agent or source.
-- **Health is a gate, not a footnote.** If the agent crashes or times out even once, status is `FAIL` — fix the legal-fallback/policy before `self-play-eval`. A crashing agent bleeds rating on the ladder.
+- **Health is a gate, not a footnote.** If the agent crashes, times out, or plays an illegal move even once, status is `FAIL` — fix the legal-fallback/policy before `self-play-eval`. A forfeiting agent bleeds rating on the ladder. (Forfeited episodes also count as **losses** in the win rate, so a broken agent can't hide behind the games it didn't forfeit.)
 - **The win rate is local and vs a simple opponent.** It is **not** a Kaggle standing (the live ladder has a far larger, shifting opponent pool). Never present it as predictive of leaderboard position.
-- **The recommendation is a hypothesis.** `scripted_sufficient` / `iterate_heuristic_or_search` / `weak_vs_random_fix_first` point at a next direction; only a Kaggle submission validates any of them.
+- **The recommendation is a hypothesis.** `scripted_sufficient` / `iterate_heuristic_or_search` / `weak_vs_random_fix_first` (or `fix_health_first` when health FAILs — a forfeiting agent can't be rated on strategy) point at a next direction; only a Kaggle submission validates any of them.
 
 ## Steps
 1. **Need a scaffold first.** If there's no agent bundle, run `scaffold-submission`. Write a heuristic into its `=== YOUR POLICY ===` block (or measure the random-legal floor as a sanity check).

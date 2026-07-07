@@ -46,13 +46,20 @@ def parse_note(path):
             km = re.match(r"\s*([A-Za-z_]+)\s*:\s*(.*)$", line)
             if not km:
                 continue
-            key, val = km.group(1), km.group(2).strip()
-            val = val.strip().strip('"').strip("'")
+            key, raw = km.group(1), km.group(2).strip()
+            # strip a trailing inline comment on UNQUOTED values (e.g. "status: digested  # to-read | ...")
+            if not (raw.startswith('"') or raw.startswith("'")):
+                raw = re.sub(r"\s+#.*$", "", raw).strip()
+            val = raw.strip().strip('"').strip("'")
             if val.startswith("[") and val.endswith("]"):
                 val = [v.strip().strip('"').strip("'") for v in val[1:-1].split(",") if v.strip()]
             fm[key] = val
-    # wikilinks anywhere in the body
-    wikilinks = [w.strip() for w in re.findall(r"\[\[([^\]]+)\]\]", body) if w.strip()]
+    # wikilinks anywhere in the body; handle Foam/Obsidian [[target|alias]] and [[target#heading]]
+    wikilinks = []
+    for w in re.findall(r"\[\[([^\]]+)\]\]", body):
+        target = w.split("|", 1)[0].split("#", 1)[0].strip()
+        if target:
+            wikilinks.append(target)
     # recall prompts: capture the "## Recall prompts" section, pull Q/A pairs
     recall = []
     rm = re.search(r"^##\s+Recall prompts\s*$(.*?)(^##\s|\Z)", body, re.S | re.M)
@@ -157,12 +164,16 @@ def cmd_recall(a):
 
     if a.reviewed:
         rec = log.get(a.reviewed, {"level": 0})
-        rec["level"] = min(rec.get("level", 0) + 1, len(INTERVALS) - 1)
+        level = rec.get("level", 0)
+        # use THIS review's interval (INTERVALS[level]) before advancing — a first review of a new
+        # note (level 0) schedules the 1-day step, not the 3-day one.
+        interval = INTERVALS[min(level, len(INTERVALS) - 1)]
+        rec["level"] = min(level + 1, len(INTERVALS) - 1)
         rec["last_reviewed"] = today
-        rec["next_due"] = _add_days(today, INTERVALS[rec["level"]])
+        rec["next_due"] = _add_days(today, interval)
         log[a.reviewed] = rec
         json.dump(log, open(a.log, "w"), indent=2)
-        print(f"marked '{a.reviewed}' reviewed → next due {rec['next_due']} (interval {INTERVALS[rec['level']]}d)")
+        print(f"marked '{a.reviewed}' reviewed → next due {rec['next_due']} (interval {interval}d)")
         return
 
     with_recall = [n for n in notes if n["recall"]]

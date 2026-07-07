@@ -22,6 +22,30 @@ def die(msg, code):
     sys.exit(code)
 
 
+def enforce_authorized_scope(task):
+    """Defense-in-depth scope gate (behind the conductor's one-time attestation): the offensive
+    skills REFUSE unless the target is an authorized sandbox / harness / owned system. Prose in the
+    SKILL is not enough — this puts the refusal in code. Refuses (exit 4) on a missing attestation,
+    a target_class outside the allowed set, or a named production product in target_name."""
+    allowed_classes = ("kaggle_sandbox", "local_harness", "owned_authorized_system")
+    named_products = ("chatgpt", "openai", "gpt-4", "gpt-3", "gpt4", "gemini", "bard", "claude",
+                      "anthropic", "copilot", "llama", "grok", "mistral", "perplexity", "deepseek", "qwen")
+    if not task.get("authorization_confirmed"):
+        die("REFUSED: authorization_confirmed is not true in redteam_task.json — the target must be an "
+            "authorized sandbox/competition/owned system, attested via frame-redteam-task, before any attack.", 4)
+    tclass = str(task.get("target_class") or "").strip().lower()
+    if tclass not in allowed_classes:
+        die(f"REFUSED: target_class must be exactly one of {allowed_classes} — got {task.get('target_class')!r}. "
+            "Only sandbox/competition/owned targets are in scope; set it in redteam_task.json via frame-redteam-task.", 4)
+    name = str(task.get("target_name") or "").lower()
+    hit = next((p for p in named_products if p in name), None)
+    if hit:
+        die(f"REFUSED: target_name {task.get('target_name')!r} looks like a production/real product ('{hit}'). "
+            "This pipeline is for authorized sandbox/competition/owned targets ONLY — never production systems, "
+            "named products, or other competitors. If this is your OWN sandboxed agent, rename it to drop the "
+            "product name.", 4)
+
+
 def marker_values(args_contains):
     """The string values an injected step must surface to trigger the targeted tool call."""
     return [str(v) for v in (args_contains or {}).values()]
@@ -73,9 +97,7 @@ def main():
     with open(args.task_json) as f:
         task = json.load(f)
 
-    if not task.get("authorization_confirmed"):
-        die("REFUSED: authorization_confirmed is not true in redteam_task.json. frame-redteam-task must capture the "
-            "authorization attestation (sandbox/competition/owned-system only) before any attack is generated.", 4)
+    enforce_authorized_scope(task)
 
     preds = task.get("predicates") or {}
     targeted = preds.get("targeted_unsafe")
@@ -95,9 +117,10 @@ def main():
         "predicates_targeted": {"tool": target_tool, "args_contains": targeted.get("args_contains", {})},
         "chains": chains,
         "total_candidates": len(chains),
-        "scope_note": "Generated ONLY for the declared targeted_unsafe predicate on the authorized sandbox/competition target. "
-                      "Not for production systems, named real products, or other competitors. Steps are templates to refine "
-                      "against the target's actual tool surface; they are not tuned real-world exploits.",
+        "scope_note": (f"Generated ONLY for the declared targeted_unsafe predicate on target_class="
+                       f"{task.get('target_class')!r} (validated in-scope: authorized sandbox/competition/owned "
+                       "system, not a named production product — enforced in code, not just prose). Steps are "
+                       "templates to refine against the target's actual tool surface; they are not tuned real-world exploits."),
         "notes": "",
     }
     with open("attack_chains.json", "w") as f:

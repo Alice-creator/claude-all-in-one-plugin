@@ -20,22 +20,26 @@ Turn one chosen paper into a **durable, visual literature note** — not a passi
 - **Never overwrites** an existing note (the script appends `-2`, `-3`).
 
 ## Steps
-1. **Scaffold the note + HTML** from the paper id:
+1. **Classify the paper type, then scaffold** — the type decides the visual archetype (see step 4). Pass it via `--type`:
    ```bash
    .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/digest-paper/scripts/fetch_paper.py" \
-     "<DOI | arxiv:NNNN.NNNNN | OpenAlex Wxxxx>" [--quartile Q1] [--tags topic1,topic2] \
-     --out-dir research/notes --mailto "<your-email>"
+     "<DOI | arxiv:NNNN.NNNNN | OpenAlex Wxxxx>" --type method|survey|benchmark|analysis \
+     [--quartile Q1] [--tags topic1,topic2] --out-dir research/notes --mailto "<your-email>"
    ```
-   (Or `--title "..."` to resolve by title. If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/digest-paper/scripts/fetch_paper.py`.) It prints the metadata JSON and writes `<slug>.md` + `<slug>-mechanism.html`.
+   (Or `--title "..."` to resolve by title. If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/digest-paper/scripts/fetch_paper.py`.) It prints the metadata JSON and writes `<slug>.md` + `<slug>-mechanism.html`. **`--type survey` uses the taxonomy/landscape template; the others use the mechanism/pipeline template** — picking the wrong one (e.g. method for a survey) collapses a whole field into one diagram, so classify honestly first.
 2. **Read with the three-pass method.** Pass 1 (5–10 min): title, abstract, intro, section headings, conclusions, glance references → fill the **five Cs** (Category, Context, Correctness, Contributions, Clarity) and the TL;DR. Pass 2: grasp the content → fill Paper summary, Issues, Results. Pass 3 (only if you need depth/will build on it): the methodology, assumptions, formulas. (Use WebFetch on the PDF/landing page if the abstract isn't enough.)
 3. **Fill the literature note** (`research/notes/<slug>.md`) in your own words — especially **Relation to own work** (would you use this? where? what to try first?) and the **Recall prompts** (3–5 Q→A pairs you can self-test on later).
-4. **Author the mechanism HTML** (`<slug>-mechanism.html`): replace each `{{TOKEN}}` / `<!-- EDIT -->` with this paper's specifics — turn the method into an ordered left-to-right **pipeline** of 3–7 stages (input → transform → core mechanism → output), the 1–3 key equations (explain every symbol), and the intuition/where-it-breaks panels. Keep it a *mechanism* picture, not a results table.
+4. **Author the visual** (`<slug>-mechanism.html`) — and **match the archetype to the paper type**, because the right picture differs:
+   - **method / empirical → a pipeline/architecture diagram** (`mechanism.html`): grouped boxes (offline/training vs inference, encoder/decoder, modules, stores), labelled arrows (`marker-start`+`marker-end` for bidirectional; a down-and-back path for a feedback loop), numbered badges → legend, the key equation, and intuition/where-it-breaks panels.
+   - **survey → a taxonomy/landscape MAP** (`landscape.html`): the survey's contribution is the *map of the field*, so compare the **approaches/paradigms** it organizes (one card each, mini-flow showing what each adds) and catalog the **technique families** it covers (columns of chips) + how the field is evaluated. **Do NOT draw one pipeline for a survey** — that throws away the point.
+   - **benchmark → tasks × metrics / what's measured;** **analysis → claim → evidence → caveat.** Adapt the mechanism template's boxes accordingly.
+   The test: *reading the visual should teach what the paper actually contributes.* Keep any `<svg>` well-formed XML (close every tag, escape `&` as `&amp;`), everything inside the viewBox, and the file self-contained (inline CSS+SVG, no external resources).
 5. **Hand off to `link-notes`** to wire `[[wikilinks]]` to related notes and register the recall prompts.
 
 ## Output style
 - After scaffolding, tell the user the two file paths and open with the **five Cs** read so they know what they're getting into before the deep read.
 - The note's voice is yours/the reader's — concise, skeptical, practitioner-focused ("here's what I'd actually use").
-- The HTML is for a visual learner: clear stages, minimal text per box, the equation that carries the idea.
+- The HTML is for a visual learner: a labelled architecture diagram (grouped boxes + arrows + numbered legend) that conveys the mechanism at a glance, the equation that carries the idea, and minimal text per box.
 
 ## Grounding
 - **Three-pass method + five Cs:** Keshav, *How to Read a Paper* (ACM SIGCOMM CCR, 2007) — pass 1 is a 5–10 min skim answering Category/Context/Correctness/Contributions/Clarity; later passes add content then depth.

@@ -1,14 +1,30 @@
 <!doctype html>
 <!--
-  mechanism.html — a self-contained, OFFLINE visual explainer of ONE paper's mechanism.
-  The digest-paper skill / paper-researcher agent fills this in per paper.
+  mechanism.html — a self-contained, OFFLINE *architecture diagram* of ONE paper's mechanism.
+  The digest-paper skill / paper-researcher agent fills this per paper.
 
-  HARD RULES for whoever edits this:
-  - SELF-CONTAINED: inline CSS only, NO external scripts/fonts/CDNs/images (must open from disk).
-  - Replace every {{TOKEN}} and every <!-- EDIT --> block with the SPECIFIC paper's content.
-  - The "Pipeline" is the heart: turn the paper's method into an ordered left-to-right flow of
-    stages (data → transform → model → output). One <div class="stage"> per step.
-  - Keep it a MECHANISM picture (how it works), not a results dump. 3–7 stages is the sweet spot.
+  GOAL: reading this page should let someone understand HOW the paper works — like a good
+  systems/architecture diagram (grouped boxes + labelled arrows + numbered callouts → legend),
+  NOT a flat row of cards and NOT a results table.
+
+  HARD RULES:
+  - SELF-CONTAINED: inline CSS + inline SVG only. NO external scripts/fonts/CDNs/images.
+  - The SVG <svg> block MUST stay well-formed XML (close every tag, escape & as &amp;) so it
+    renders reliably.
+  - Keep every <rect>/<text> inside the viewBox (default 0 0 980 560). Lay boxes on a mental
+    grid so arrows line up and nothing overlaps.
+
+  HOW TO ADAPT (replace the EXAMPLE content below):
+  1. Identify the paper's components and group them (e.g. "offline/training" vs "inference",
+     "encoder" vs "decoder", data stores, modules). Draw each group as a <rect class="grp">
+     with a title + a numbered .badge.
+  2. Place component nodes (<rect class="node"> + <text>) inside groups. 2-line label via a
+     second <text class="nodeS">.
+  3. Connect them with <path class="edge" marker-end="url(#ah)">. Use marker-start AND
+     marker-end for a bidirectional link; route a path down-and-back for a feedback loop.
+  4. Put a numbered .badge on each KEY step and explain each number in the .legend below.
+  5. Fill the equation panel (1-3 equations that carry the idea) and the why/breaks panels.
+  6. Adjust the viewBox if you need more room; keep it readable (5-9 nodes is plenty).
 -->
 <html lang="en">
 <head>
@@ -16,69 +32,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{TITLE}} — mechanism</title>
 <style>
-  :root { --bg:#0f1220; --card:#1a1f36; --ink:#e7e9f3; --muted:#9aa3c7; --accent:#6ea8fe; --edge:#3a4170; --eq:#11152a; }
-  * { box-sizing: border-box; }
-  body { margin:0; padding:2rem; background:var(--bg); color:var(--ink);
+  :root { --ink:#1a1f36; --muted:#5b6478; --line:#6b7aa8; --accent:#1a73e8;
+          --box:#ffffff; --boxedge:#c7d0e6; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:1.8rem; background:#f7f8fb; color:var(--ink);
          font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  .wrap { max-width: 1100px; margin: 0 auto; }
-  h1 { font-size:1.5rem; margin:0 0 .25rem; }
-  .sub { color:var(--muted); margin:0 0 1.5rem; }
-  h2 { font-size:1.05rem; text-transform:uppercase; letter-spacing:.08em; color:var(--accent);
-       margin:2rem 0 .75rem; }
-  .pipeline { display:flex; flex-wrap:wrap; align-items:stretch; gap:.4rem; }
-  .stage { flex:1 1 150px; min-width:150px; background:var(--card); border:1px solid var(--edge);
-           border-radius:12px; padding:.8rem .9rem; position:relative; }
-  .stage .n { font-size:.72rem; color:var(--accent); font-weight:700; }
-  .stage h3 { font-size:.95rem; margin:.15rem 0 .35rem; }
-  .stage p { font-size:.84rem; color:var(--muted); margin:0; }
-  .arrow { align-self:center; color:var(--edge); font-size:1.6rem; flex:0 0 auto; }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:1.45rem; margin:0 0 .2rem; }
+  .sub { color:var(--muted); margin:0 0 1.2rem; }
+  h2 { font-size:.95rem; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); margin:1.8rem 0 .6rem; }
+  .diagram { width:100%; height:auto; background:var(--box); border:1px solid var(--boxedge); border-radius:14px; }
+  svg text { font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .grpL { font:600 13px system-ui; fill:#3a4a73; }
+  .node { fill:var(--box); stroke:var(--boxedge); stroke-width:1.5; }
+  .nodeT { font:13px system-ui; fill:var(--ink); }
+  .nodeS { font:11px system-ui; fill:var(--muted); }
+  .edge { stroke:var(--line); stroke-width:2; fill:none; }
+  .edgeL { font:11px system-ui; fill:var(--muted); }
+  .badge { fill:var(--accent); }
+  .badgeT { font:700 12px system-ui; fill:#fff; }
+  .legend { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:.5rem .9rem; margin-top:.8rem; }
+  .legend div { font-size:.9rem; } .legend b { color:var(--accent); }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-  @media (max-width:720px){ .grid2{ grid-template-columns:1fr; } }
-  .panel { background:var(--card); border:1px solid var(--edge); border-radius:12px; padding:1rem 1.2rem; }
-  .panel ul { margin:.3rem 0 0; padding-left:1.1rem; } .panel li { margin:.25rem 0; }
-  .eq { background:var(--eq); border:1px solid var(--edge); border-radius:10px; padding:.7rem 1rem;
-        font-family:"SFMono-Regular",Consolas,Menlo,monospace; font-size:.92rem; overflow-x:auto; }
-  .eq .why { color:var(--muted); font-family:system-ui,sans-serif; font-size:.82rem; margin-top:.3rem; }
-  .tag { display:inline-block; background:#243; color:#9f9; border:1px solid #3a5; border-radius:999px;
-         padding:.05rem .55rem; font-size:.75rem; margin-right:.3rem; }
-  footer { color:var(--muted); font-size:.8rem; margin-top:2rem; border-top:1px solid var(--edge); padding-top:.8rem; }
+  @media (max-width:680px){ .grid2{ grid-template-columns:1fr; } }
+  .panel { background:var(--box); border:1px solid var(--boxedge); border-radius:12px; padding:.9rem 1.1rem; }
+  .panel ul { margin:.3rem 0 0; padding-left:1.1rem; } .panel li { margin:.3rem 0; font-size:.9rem; }
+  .eq { background:#0f1733; color:#e7e9f3; border-radius:10px; padding:.7rem 1rem; font-family:Consolas,Menlo,monospace; font-size:.95rem; }
+  .eq .why { color:#9aa3c7; font-family:system-ui; font-size:.82rem; margin-top:.3rem; }
+  footer { color:var(--muted); font-size:.8rem; margin-top:1.8rem; border-top:1px solid var(--boxedge); padding-top:.7rem; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>{{TITLE}}</h1>
-  <p class="sub">{{AUTHORS}} · {{VENUE}} ({{YEAR}}) — <strong>mechanism at a glance</strong></p>
+  <p class="sub">{{AUTHORS}} · {{VENUE}} ({{YEAR}}) — <strong>how it works</strong></p>
 
-  <!-- EDIT: one-line plain-English statement of what the method DOES. -->
-  <p><span class="tag">core idea</span> Replace this with the single sentence that captures how the method works.</p>
+  <h2>Architecture</h2>
+  <!-- EDIT: replace the EXAMPLE diagram below with the paper's actual components/groups/arrows. -->
+  <svg class="diagram" viewBox="0 0 980 560" role="img" aria-label="paper mechanism diagram">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#6b7aa8"/>
+      </marker>
+    </defs>
 
-  <h2>Pipeline — how it works</h2>
-  <div class="pipeline">
-    <!-- EDIT: replace these stages with the paper's actual steps. Add/remove .stage + .arrow pairs. -->
-    <div class="stage"><div class="n">1 · INPUT</div><h3>Data in</h3><p>What goes in (shape, modality).</p></div>
-    <div class="arrow">&rarr;</div>
-    <div class="stage"><div class="n">2 · TRANSFORM</div><h3>Key step</h3><p>The central transformation/representation.</p></div>
-    <div class="arrow">&rarr;</div>
-    <div class="stage"><div class="n">3 · MODEL</div><h3>Core mechanism</h3><p>The novel component — what's new here.</p></div>
-    <div class="arrow">&rarr;</div>
-    <div class="stage"><div class="n">4 · OUTPUT</div><h3>Prediction</h3><p>What comes out + how it's trained/scored.</p></div>
+    <!-- EXAMPLE group container (with title + numbered badge) -->
+    <rect x="30" y="64" width="500" height="118" rx="12" fill="#eef2fb" stroke="#c7d0e6"/>
+    <text class="grpL" x="48" y="88">Group A — e.g. offline / training</text>
+    <rect class="badge" x="494" y="72" width="22" height="22" rx="5"/><text class="badgeT" x="505" y="88" text-anchor="middle">1</text>
+
+    <!-- EXAMPLE nodes + arrows (a linear sub-flow) -->
+    <rect class="node" x="48"  y="108" width="124" height="50" rx="9"/><text class="nodeT" x="110" y="138" text-anchor="middle">Input</text>
+    <rect class="node" x="212" y="108" width="120" height="50" rx="9"/><text class="nodeT" x="272" y="138" text-anchor="middle">Stage A</text>
+    <rect class="node" x="372" y="108" width="138" height="50" rx="9"/><text class="nodeT" x="441" y="132" text-anchor="middle">Stage B</text><text class="nodeS" x="441" y="148" text-anchor="middle">one-line detail</text>
+    <path class="edge" d="M172,133 H212" marker-end="url(#ah)"/>
+    <path class="edge" d="M332,133 H372" marker-end="url(#ah)"/>
+
+    <!-- EXAMPLE shared store / module (bridges two groups) -->
+    <rect class="node" x="410" y="232" width="160" height="64" rx="9" stroke="#1a73e8" stroke-width="2"/>
+    <text class="nodeT" x="490" y="268" text-anchor="middle">Shared store / module</text>
+    <path class="edge" d="M441,158 V200 Q441,232 470,232" marker-end="url(#ah)"/>
+
+    <!-- EXAMPLE second group + core mechanism + output, with a feedback loop -->
+    <rect x="30" y="332" width="920" height="206" rx="12" fill="#fdeef3" stroke="#f3c9d8"/>
+    <text class="grpL" x="48" y="356">Group B — e.g. inference / the core mechanism</text>
+    <rect class="node" x="48"  y="388" width="140" height="50" rx="9"/><text class="nodeT" x="118" y="418" text-anchor="middle">Query / input</text>
+    <rect class="node" x="372" y="388" width="150" height="50" rx="9"/><text class="nodeT" x="447" y="418" text-anchor="middle">Core mechanism</text>
+    <rect class="badge" x="372" y="378" width="22" height="22" rx="5"/><text class="badgeT" x="383" y="394" text-anchor="middle">2</text>
+    <rect class="node" x="732" y="388" width="130" height="50" rx="9"/><text class="nodeT" x="797" y="418" text-anchor="middle">Output</text>
+    <rect class="badge" x="732" y="378" width="22" height="22" rx="5"/><text class="badgeT" x="743" y="394" text-anchor="middle">3</text>
+    <path class="edge" d="M188,413 H372" marker-end="url(#ah)"/>
+    <path class="edge" d="M522,413 H732" marker-end="url(#ah)"/>
+    <!-- bidirectional link to the shared store -->
+    <path class="edge" d="M447,388 V304" marker-start="url(#ah)" marker-end="url(#ah)"/>
+    <!-- feedback loop -->
+    <path class="edge" d="M797,438 V498 H447 V438" marker-end="url(#ah)"/>
+    <rect class="badge" x="600" y="487" width="22" height="22" rx="5"/><text class="badgeT" x="611" y="503" text-anchor="middle">4</text>
+    <text class="edgeL" x="630" y="503">feedback / iterate (if the paper has one)</text>
+  </svg>
+
+  <!-- EDIT: one short line per numbered badge, in order. -->
+  <div class="legend">
+    <div><b>1 …</b> what group/step 1 does</div>
+    <div><b>2 …</b> the core mechanism in one line</div>
+    <div><b>3 …</b> what the output is</div>
+    <div><b>4 …</b> the loop / iteration, if any</div>
   </div>
 
-  <h2>Key equations</h2>
-  <!-- EDIT: 1–3 equations that carry the idea. Plain-text math is fine; explain every symbol. -->
+  <h2>The one equation that matters</h2>
+  <!-- EDIT: 1-3 equations that carry the idea; explain every symbol. -->
   <div class="eq">y = f(x; θ)
-    <div class="why">What each symbol means and why this equation is the crux.</div>
+    <div class="why">What each symbol means and why this is the crux.</div>
   </div>
 
   <h2>The idea in context</h2>
   <div class="grid2">
     <div class="panel"><strong>Why it works / intuition</strong>
-      <ul><li><!-- EDIT --> The mechanism's intuition in 2–3 bullets.</li></ul></div>
-    <div class="panel"><strong>Where it can break</strong>
-      <ul><li><!-- EDIT --> Assumptions / limitations that bound it.</li></ul></div>
+      <ul><li><!-- EDIT --> 2-3 bullets.</li></ul></div>
+    <div class="panel"><strong>Where it breaks</strong>
+      <ul><li><!-- EDIT --> assumptions / limitations.</li></ul></div>
   </div>
 
-  <footer>Generated by <code>digest-paper</code>. Mechanism explainer for personal study — pairs with the literature note. Self-contained: open directly in a browser.</footer>
+  <footer>Generated by <code>digest-paper</code> — pairs with the literature note. Self-contained; open directly in a browser.</footer>
 </div>
 </body>
 </html>

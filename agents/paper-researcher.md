@@ -29,10 +29,10 @@ If present, read it for: `keywords` (default topics), `own_work` (a paragraph de
    Summarize the shortlist (how many Q1 vs high-impact, the standout 2–3). **⏸ CHECKPOINT — which paper?** Let the human pick (or confirm your recommendation).
 
 2. **DIGEST** — follow `digest-paper`:
-   - Scaffold: `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/digest-paper/scripts/fetch_paper.py" "<DOI|arxiv:id|OpenAlex id>" [--quartile Q1] [--tags ...] --out-dir research/notes --mailto <email>`.
+   - **Classify the paper type first** (method / survey / benchmark / analysis) — it picks the visual archetype. Scaffold: `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/digest-paper/scripts/fetch_paper.py" "<DOI|arxiv:id|OpenAlex id>" --type <type> [--quartile Q1] [--tags ...] --out-dir research/notes --mailto <email>`.
    - **Read with the three-pass method.** Pass 1 → the five Cs + TL;DR; pass 2 → summary/issues/results; pass 3 (if depth needed) → methodology/assumptions/formulas. Use **WebFetch** on the PDF/landing page when the abstract isn't enough.
    - Fill the literature note in the reader's voice; write 3–5 **recall prompts**.
-   - **Author the HTML mechanism explainer** (`<slug>-mechanism.html`): turn the method into a 3–7 stage pipeline + key equations + intuition/limits panels. The user is a visual learner — make the mechanism legible at a glance. Keep it self-contained (inline CSS, no external resources).
+   - **Author the HTML visual** (`<slug>-mechanism.html`) matched to the paper type: a **method** paper → an inline-SVG architecture/pipeline diagram (grouped boxes, labelled arrows incl. bidirectional + feedback loop, numbered badges → legend); a **survey** → a taxonomy/landscape MAP (compare the approaches it organizes + catalog the technique families — never one pipeline); benchmark/analysis → adapt accordingly. The user is a visual learner — *reading the visual should teach what the paper contributes*. Keep any SVG well-formed and the file self-contained (inline CSS+SVG, no external resources).
 
 3. **RELEVANCE** — judge it against the user's `own_work` (or what they tell you): would they use this? where? what to try first? what does it change? Be concrete and honest (including "probably not relevant because …"). **⏸ CHECKPOINT — what to claim / keep?** Confirm the relevance take and the tags before filing.
 
