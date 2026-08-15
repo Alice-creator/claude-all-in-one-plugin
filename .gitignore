@@ -47,6 +47,21 @@ attack_chains_report.md
 hardening_summary.json
 hardening_report.md
 defended_target.py
+# cv-modeler pipeline (object detection — generated inspection/split/bundle/eval/submission artifacts)
+image_inspection.json
+image_inspection_report.md
+image_splits/
+cv_train_scaffold/
+smoke_throwaway/
+class_map.json
+normalization_report.json
+train_scaffold_manifest.json
+train_scaffold_report.md
+detection_metrics.json
+detection_report.md
+preds*.csv
+submission.csv
+submission_coco.json
 # ...but DO keep the skill TEMPLATES that share a generated-artifact filename
 !skills/*/templates/agent_task.json
 !skills/*/templates/redteam_task.json

@@ -43,7 +43,15 @@ def infer_task(y):
     nun = y.nunique(dropna=True)
     if pd.api.types.is_float_dtype(y) and nun > 20:
         return "regression"
-    return "classification" if nun <= max(20, int(0.05 * len(y))) else "regression"
+    if nun > max(20, int(0.05 * len(y))):
+        return "regression"
+    # A numeric target with a handful of ordered values (e.g. a 1-5 rating) is auto-classified here but is
+    # often really ordinal REGRESSION — warn loudly so the wrong task/metric/stratify isn't picked silently.
+    if pd.api.types.is_numeric_dtype(y) and 3 <= nun <= 20:
+        print(f"WARNING infer_task: numeric target with {nun} distinct values auto-inferred as CLASSIFICATION; "
+              "if it is an ordinal rating/score it is really regression — pass --task regression to override.",
+              file=sys.stderr)
+    return "classification"
 # -------------------------------------------------------------------------------
 
 LOWER_BETTER = {"mae", "rmse", "mape"}

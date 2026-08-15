@@ -56,6 +56,12 @@ def infer_task(y):
     if pd.api.types.is_float_dtype(y) and nun > 20:
         return "regression"
     if nun <= max(20, int(0.05 * len(y))):
+        # Warn loudly when a numeric target with a few ordered values (e.g. a 1-5 rating) is auto-classified —
+        # it is often really ordinal regression, and here it silently drives stratify-vs-not. --task overrides.
+        if pd.api.types.is_numeric_dtype(y) and 3 <= nun <= 20:
+            print(f"WARNING infer_task: numeric target with {nun} distinct values auto-inferred as CLASSIFICATION; "
+                  "if it is an ordinal rating/score it is really regression — pass --task regression to override.",
+                  file=sys.stderr)
         return "classification"
     return "regression"
 
