@@ -34,6 +34,12 @@ SCRIPTS = {
     "harden-agent": "skills/harden-agent/scripts/harden_agent.py",
     "build-attack-chains": "skills/build-attack-chains/scripts/build_attack_chains.py",
     "scaffold-attack": "skills/scaffold-attack/scripts/scaffold_attack.py",
+    # cv-modeler pipeline (object detection)
+    "inspect-images": "skills/inspect-images/scripts/inspect_images.py",
+    "split-images": "skills/split-images/scripts/split_images.py",
+    "scaffold-train": "skills/scaffold-train/scripts/scaffold_train.py",
+    "evaluate-detection": "skills/evaluate-detection/scripts/evaluate_detection.py",
+    "make-detection-submission": "skills/make-detection-submission/scripts/make_detection_submission.py",
     # data / analysis / research scripts (share the eprint helper)
     "build-chart": "skills/build-chart/scripts/chart.py",
     "digest-paper": "skills/digest-paper/scripts/fetch_paper.py",
@@ -62,11 +68,18 @@ GROUPS = [
     ("outcome", ["baseline-agent", "self-play-eval"]),  # win/draw/loss from episode rewards
     # cross-pipeline utility helpers copied byte-identical
     ("die", ["baseline-agent", "build-attack-chains", "harden-agent", "profile-agent",
-             "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval"]),
+             "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval",
+             "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
+             "make-detection-submission"]),
     ("eprint", ["build-chart", "digest-paper", "discover-papers", "link-notes",
-                "profile-dataset", "query-sql", "report", "verify-analysis"]),
+                "profile-dataset", "query-sql", "report", "verify-analysis",
+                "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
+                "make-detection-submission"]),
     # research network fetch with retry/backoff (429/5xx + Retry-After) — must stay in sync
     ("http_get_bytes", ["discover-papers", "digest-paper"]),
+    # cv-modeler pipeline: the canonical image_id, and the safety-critical leaky-split predicate
+    ("stem_of", ["inspect-images", "split-images", "evaluate-detection", "make-detection-submission"]),
+    ("is_leaky_provenance", ["split-images", "evaluate-detection", "scaffold-train"]),
     # agent-security defense-in-depth scope gate (must refuse identically everywhere)
     ("enforce_authorized_scope", ["build-attack-chains", "scaffold-attack", "run-redteam-eval"]),
 ]

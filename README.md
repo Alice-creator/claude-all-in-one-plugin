@@ -1,10 +1,10 @@
 # claude-all-in-one-plugin
 
-An all-in-one Claude Code plugin. Five end-to-end pipelines — **data analysis**, **tabular ML modeling**, **paper-reading research**, **Kaggle agent-competition building**, and **authorized agent-security red-teaming** — plus a **code-quality** layer, organized as *conductor agents* that drive *skills* stage-by-stage and stop at human-decision checkpoints.
+An all-in-one Claude Code plugin. Six end-to-end pipelines — **data analysis**, **tabular ML modeling**, **paper-reading research**, **Kaggle agent-competition building**, **authorized agent-security red-teaming**, and **object-detection computer vision** — plus a **code-quality** layer, organized as *conductor agents* that drive *skills* stage-by-stage and stop at human-decision checkpoints.
 
 ## Architecture
 
-Each **agent** is a conductor that owns a lifecycle and drives the **skills** it needs (a subagent can't spawn subagents, so it inlines each skill's steps and defers to the skill for detail). The two pipelines connect: when analysis concludes the goal is a model, `data-analyst` hands off to `model-builder`.
+Each **agent** is a conductor that owns a lifecycle and drives the **skills** it needs (a subagent can't spawn subagents, so it inlines each skill's steps and defers to the skill for detail). The pipelines connect at framing: when the goal is a model, `data-analyst`/`frame-ml-problem` hands off to `model-builder` (tabular); when it's an agent, to `game-agent-builder`/`agent-redteamer`; when it's images, to `cv-modeler`.
 
 ```mermaid
 flowchart TB
@@ -31,6 +31,10 @@ flowchart TB
         direction TB
         SECF["frame-redteam-task → scaffold-attack → build-attack-chains →<br/>run-redteam-eval → harden-agent"]
     end
+    subgraph CV["🖼️ Computer vision — conductor: cv-modeler"]
+        direction TB
+        CVF["inspect-images → split-images → scaffold-train →<br/>(you train on a GPU) → evaluate-detection → make-detection-submission"]
+    end
     subgraph CQ["📐 Code quality — reactive, no conductor"]
         direction TB
         HK(["hook: clean-code-reminder<br/>PostToolUse · Write|Edit|MultiEdit"]) --> CCS["clean-code (skill)"]
@@ -38,6 +42,7 @@ flowchart TB
     end
     AN -->|"goal = build a model"| ML
     AN -->|"goal = build an agent"| GA
+    AN -->|"goal = detect objects in images"| CV
 ```
 
 ## Agents → the skills they own
@@ -51,12 +56,13 @@ A conductor *owns a lifecycle*; a specialist *owns a stage*. Skills are reusable
 | `paper-researcher` | conductor — **research / paper-reading** | `discover-papers` · `digest-paper` · `link-notes` (finds Q1/high-impact papers, reads deeply, judges relevance, answers questions with web fallback, files linked notes + recall) |
 | `game-agent-builder` | conductor — **game agents** | `frame-agent-task` · `scaffold-submission` · `baseline-agent` · `self-play-eval` · `profile-agent` (scaffolds + evaluates Kaggle "submit-an-agent" bots; starts scripted, does **not** train RL) |
 | `agent-redteamer` | conductor — **agent security** | `frame-redteam-task` · `scaffold-attack` · `build-attack-chains` · `run-redteam-eval` · `harden-agent` (authorized, sandbox-only red-team **and** harden of tool-using agents) |
+| `cv-modeler` | conductor — **computer vision (object detection)** | `inspect-images` · `split-images` · `scaffold-train` · `evaluate-detection` · `make-detection-submission` (scaffolds a leakage-safe, transfer-learning YOLO detection pipeline; does **not** train the model — that's GPU-hours you run — and does **not** do vision-model security / machine-unlearning) |
 | `data-cleaner` | specialist — iterative cleaning loop | `profile-dataset` · `cleaning-report` (does the cleaning itself per `clean-data`'s approach, via generated per-round scripts) |
 | `eda-analyst` | specialist — exploratory analysis | `eda` |
 | `verify-analysis` | specialist — statistical validation | bundled `stat_tests.py` (corr / group / anova / chi2; no slash-skill) |
 | `clean-code-reviewer` | reactive — audits a diff/files | `clean-code` |
 
-Every conductor **stops at checkpoints** (the human keeps the judgment calls), **never modifies source data** (every stage writes new files), and opens its reports with a Mermaid diagram. `model-builder` additionally enforces the modeling disciplines: leakage-safe (preprocessing fit on train only; test touched once at the end), baseline-before-complexity, and **offline ≠ online** (it says what it cannot measure). Tabular only — it refuses DL/RL, handing agent goals to `game-agent-builder`. The two agentic conductors carry the same honesty: they **scaffold/evaluate/profile/harness but do not train deep-RL or run the live ladder** — a local self-play rating ≠ Kaggle standing, an offline ASR ≠ production security. `agent-redteamer` is additionally **dual-use-bounded**: a one-time authorization gate, per-skill refusals (sandbox/competition/owned systems only — never production targets, named products, or other competitors), predicate-locked attacks, and judge-free metrics.
+Every conductor **stops at checkpoints** (the human keeps the judgment calls), **never modifies source data** (every stage writes new files), and opens its reports with a Mermaid diagram. `model-builder` additionally enforces the modeling disciplines: leakage-safe (preprocessing fit on train only; test touched once at the end), baseline-before-complexity, and **offline ≠ online** (it says what it cannot measure). Tabular only — it refuses DL/RL and images, handing agent goals to `game-agent-builder` and image goals to `cv-modeler`. The three scaffolding conductors carry the same honesty: they **scaffold/evaluate/profile/harness but do not train deep models or run the live ladder** — a local self-play rating ≠ Kaggle standing, an offline ASR ≠ production security, and an offline **mAP ≠ leaderboard ≠ deployable operating point**. `agent-redteamer` is additionally **dual-use-bounded**: a one-time authorization gate, per-skill refusals (sandbox/competition/owned systems only — never production targets, named products, or other competitors), predicate-locked attacks, and judge-free metrics. `cv-modeler` enforces the CV analog of the leakage rule (group-by-source splits that fold in augmentation-aware near-dups; a per-image split is refused unless explicitly acked and then stamped "leaky" downstream), normalizes 16-bit imagery instead of silently truncating it, and treats vision-model security / machine-unlearning as **out of scope** (unresearched, distinct from `agent-redteamer`).
 
 ## Skills reference
 
@@ -114,6 +120,16 @@ Every conductor **stops at checkpoints** (the human keeps the judgment calls), *
 | `run-redteam-eval` | Replays the chains and computes **Benign Utility · Utility-Under-Attack · Targeted ASR** via deterministic state predicates (**never an LLM judge** — it can itself be hijacked), with a determinism check. Ships a mock target so it runs end-to-end. Leads with **offline ASR ≠ production security**. |
 | `harden-agent` | Recommends mitigations by intervention stage (text/model/execution-level) and emits a defended target so you re-measure **residual ASR** on the same chains — closing the find→fix loop. |
 
+**Computer vision** (the `cv-modeler` pipeline — object detection on images, e.g. astronomical debris-streak detection; each writes a Mermaid-led report + a JSON sidecar). It **scaffolds/evaluates — it does not train the model** (that's GPU-hours you run on your own hardware) and does **not** touch vision-model security / machine-unlearning:
+
+| Skill | What it does |
+|-------|--------------|
+| `inspect-images` | "Become one with the data" — detects **16-bit** astronomical PNGs a naive 8-bit loader would truncate, finds **augmentation-aware near-duplicates** (canonical dHash over rot/flip orientations) with an explicit reliability flag for sparse-sky imagery, summarizes COCO annotations, and proposes provenance **group-key candidates**. Writes `image_inspection.json`. |
+| `split-images` | **Leakage-safe** grouped split (GroupKFold / grouped holdout) that **consumes** inspect-images' near-dup clusters so rotated/near-identical copies can't straddle folds, and **refuses a silent per-image split** (no filename group ≠ independence). Its real check is `dup_clusters_straddling_folds==0`, not the tautological `groups_straddling==0`. Writes `image_splits/` + `split_summary.json`. |
+| `scaffold-train` | Generates a **runnable Ultralytics YOLO** transfer-learning bundle (data.yaml, `prepare_data.py`, `train.py`, `predict.py`, pinned requirements) with a COCO→0-based **class map** shared downstream and **per-image** 16-bit→8-bit normalization. Runs a CPU **smoke test** that asserts YOLO loaded >0 labels. Manifest carries `produces_trained_model:false` — real training is your GPU. |
+| `evaluate-detection` | Honest offline **mAP / per-class AP** — prefers **pycocotools**, with a clearly-labeled approximate numpy fallback (global per-class accumulation). Reads split provenance and **stamps a leaky/unknown split's mAP as inflated**; reports boxes/image + min confidence so the COCO top-100 and low-threshold caveats are data-driven. Sidecar: `offline_only`, `matches_leaderboard:false`. |
+| `make-detection-submission` | Formats predictions into the competition's submission (`conf x y w h` per-image strings aligned to `sample_submission`, or COCO `results.json`) and validates the **format** (every sample image present, columns/tokens well-formed). Validates format **not correctness**; refuses to guess the box order/units; warns on empty/sparse output. |
+
 **Code quality:**
 
 | Skill | What it does |
@@ -159,17 +175,21 @@ Plugins install at the user level — once installed, the skills and agents are 
 
 ## Requirements
 
-The data skills use Python with `pandas` (plus `openpyxl` for Excel, `pyarrow` for Parquet); EDA also uses `matplotlib` and the notebook stack, and `query-sql` uses `duckdb`. Among the modeling skills, `split-dataset` · `baseline` · `train-tune` · `evaluate-model` need `scikit-learn`; `train-tune` and `check-drift` (optional KS test only) use `scipy`; `select-model` needs only pandas/numpy and `readiness-check` is pure stdlib. The **game-agent** skills need `kaggle-environments` to run episodes (the submission bundle still generates without it; `trueskill` is optional, else stdlib ELO); the **agent-security** harness is pure stdlib with a built-in mock target (a real target / `agentdojo` / `injecagent` is user-supplied). The single install covers the data + modeling stack:
+The data skills use Python with `pandas` (plus `openpyxl` for Excel, `pyarrow` for Parquet); EDA also uses `matplotlib` and the notebook stack, and `query-sql` uses `duckdb`. Among the modeling skills, `split-dataset` · `baseline` · `train-tune` · `evaluate-model` need `scikit-learn`; `train-tune` and `check-drift` (optional KS test only) use `scipy`; `select-model` needs only pandas/numpy and `readiness-check` is pure stdlib. The **game-agent** skills need `kaggle-environments` to run episodes (the submission bundle still generates without it; `trueskill` is optional, else stdlib ELO); the **agent-security** harness is pure stdlib with a built-in mock target (a real target / `agentdojo` / `injecagent` is user-supplied). The **cv-modeler** skills need `pillow` for image inspection/conversion (numpy/scikit-learn already covered); `ultralytics` is optional (the CPU smoke-train step — the bundle still generates without it), as are `astropy` (FITS images) and `pycocotools` (the exact COCO mAP, preferred by `evaluate-detection` when present). The single install covers the data + modeling stack:
 
 ```
 pip install pandas numpy scikit-learn scipy openpyxl pyarrow matplotlib duckdb
 # for the game-agent pipeline (running episodes / the local ladder):
 pip install kaggle-environments   # optional: trueskill
+# for the cv-modeler pipeline (image inspection + the YOLO smoke-train):
+pip install pillow                # optional: ultralytics, astropy, pycocotools
 ```
 
 ## Roadmap
 
-- **Analysis** ✅, **tabular modeling** ✅, **research** ✅, **game agents** ✅, and **agent security** ✅ pipelines are in place, end-to-end.
+- **Analysis** ✅, **tabular modeling** ✅, **research** ✅, **game agents** ✅, **agent security** ✅, and **object-detection CV** ✅ pipelines are in place, end-to-end.
 - **Live MLOps:** real (online) monitoring, drift alerting, and retraining triggers are intentionally **out of scope** for the offline tooling — `check-drift` / `readiness-check` are the honest offline stand-ins (they say what they cannot measure).
-- **Deep-RL training** for the game-agent pipeline is intentionally **out of scope** (GPU-hours, not a skill's job) — the pipeline scaffolds/evaluates/profiles and points at SB3/CleanRL for the training itself.
+- **Deep-model training** (deep-RL for game agents; the actual GPU fit for `cv-modeler`) is intentionally **out of scope** (GPU-hours, not a skill's job) — the pipelines scaffold/evaluate/profile and point at the real training tools (SB3/CleanRL; Ultralytics on your GPU).
+- **Vision-model security** (machine unlearning / backdoor & poison removal — e.g. a competition's poisoned-model sub-task) is a **flagged, unresearched future capability**: `cv-modeler` deliberately does *not* attempt it, and it is distinct from `agent-redteamer` (prompt-injection for tool-using agents, not vision backdoors). It needs its own grounded research round before any skill is built.
+- **CV task coverage:** detection first; image **classification** and **segmentation** (Dice/IoU) are natural next additions to `cv-modeler`.
 - **MCP:** a SQL / database connector is a natural next addition.
