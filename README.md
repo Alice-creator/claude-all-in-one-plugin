@@ -1,6 +1,6 @@
 # claude-all-in-one-plugin
 
-An all-in-one Claude Code plugin. Six end-to-end pipelines — **data analysis**, **tabular ML modeling**, **paper-reading research**, **Kaggle agent-competition building**, **authorized agent-security red-teaming**, and **object-detection computer vision** — plus a **code-quality** layer, organized as *conductor agents* that drive *skills* stage-by-stage and stop at human-decision checkpoints.
+An all-in-one Claude Code plugin. Seven end-to-end pipelines — **data analysis**, **tabular ML modeling**, **paper-reading research**, **AI-agent research production**, **Kaggle agent-competition building**, **authorized agent-security red-teaming**, and **object-detection computer vision** — plus a **code-quality** layer, organized as *conductor agents* that drive *skills* stage-by-stage and stop at human-decision checkpoints.
 
 ## Architecture
 
@@ -22,6 +22,10 @@ flowchart TB
     subgraph RP["📖 Research — conductor: paper-researcher"]
         direction TB
         RPF["discover-papers → (pick) → digest-paper → link-notes"]
+    end
+    subgraph RS["🔬 Research production — conductor: agent-researcher"]
+        direction TB
+        RSF["frame-research-question → design-experiment → validate-eval-task 🚦 →<br/>scaffold-trials → (you run the rollouts) → analyze-trials → diagnose-failures → write-findings"]
     end
     subgraph GA["🎮 Game agents — conductor: game-agent-builder"]
         direction TB
@@ -53,7 +57,8 @@ A conductor *owns a lifecycle*; a specialist *owns a stage*. Skills are reusable
 |-------|------|--------|
 | `model-builder` | conductor — **modeling** | `frame-ml-problem` · `split-dataset` · `baseline` · `select-model` · `train-tune` · `evaluate-model` · `check-drift` · `readiness-check` |
 | `data-analyst` | conductor — **analysis** | `profile-dataset` · `clean-data` · `eda` · `build-chart` · `query-sql` · `transform-data` · `report` · `cleaning-report` (delegates validation to `verify-analysis`, modeling to `model-builder`) |
-| `paper-researcher` | conductor — **research / paper-reading** | `discover-papers` · `digest-paper` · `link-notes` (finds Q1/high-impact papers, reads deeply, judges relevance, answers questions with web fallback, files linked notes + recall) |
+| `agent-researcher` | conductor — **research production (AI agents)** | `frame-research-question` · `design-experiment` · `validate-eval-task` · `scaffold-trials` · `analyze-trials` · `diagnose-failures` · `write-findings` (preregisters a falsifiable hypothesis, sizes it, **gates on eval-task validity**, scaffolds the runner, then reports clustered-bootstrap intervals — it does **not** run your rollouts; a **RAG research specialization** plugs `check-rag-contamination` · `bm25-retrieval-metrics` · `judge-rag-answers` into the same spine) |
+| `paper-researcher` | conductor — **research consumption / paper-reading** | `discover-papers` · `digest-paper` · `link-notes` (finds Q1/high-impact papers, reads deeply, judges relevance, answers questions with web fallback, files linked notes + recall) |
 | `game-agent-builder` | conductor — **game agents** | `frame-agent-task` · `scaffold-submission` · `baseline-agent` · `self-play-eval` · `profile-agent` (scaffolds + evaluates Kaggle "submit-an-agent" bots; starts scripted, does **not** train RL) |
 | `agent-redteamer` | conductor — **agent security** | `frame-redteam-task` · `scaffold-attack` · `build-attack-chains` · `run-redteam-eval` · `harden-agent` (authorized, sandbox-only red-team **and** harden of tool-using agents) |
 | `cv-modeler` | conductor — **computer vision (object detection)** | `inspect-images` · `split-images` · `scaffold-train` · `evaluate-detection` · `make-detection-submission` (scaffolds a leakage-safe, transfer-learning YOLO detection pipeline; does **not** train the model — that's GPU-hours you run — and does **not** do vision-model security / machine-unlearning) |
@@ -99,6 +104,26 @@ Every conductor **stops at checkpoints** (the human keeps the judgment calls), *
 | `discover-papers` | **DISCOVER** — keyword → ranked shortlist of **Q1-journal or high-impact** papers via the free OpenAlex API; true-Q1 labels when you supply a Scimago table, else impact-only (citations/year), and it says which. Writes a Mermaid-led shortlist + JSON sidecar. |
 | `digest-paper` | **DIGEST** — reads one paper with Keshav's **three-pass method**, scaffolds a structured literature note (core claim · method · results · limitations · relevance-to-your-work) with bibliographic fields pre-filled, and authors a **self-contained HTML mechanism explainer** (for visual learners) + active-recall prompts. |
 | `link-notes` | **RETAIN & CONNECT** — builds a Map-of-Content `index.md` (Mermaid knowledge graph from `[[wikilinks]]`, Foam/Obsidian style) and runs a **spaced active-recall scheduler** over each note's prompts (because linked notes alone ≠ retention; retrieval practice is). |
+
+**Research production** (the `agent-researcher` pipeline — producing original findings about AI agents, as opposed to reading other people's. Each stage writes a Mermaid-led report + a JSON sidecar; the composition contract is `trials.jsonl`, one row per single run):
+
+| Skill | What it does |
+|-------|--------------|
+| `frame-research-question` | **FRAME** — turns a topic into a falsifiable, **preregistered** hypothesis: exactly one primary metric, a named baseline, a minimum effect size > 0, and the result that would refute it. Locks them behind an immutable `prereg_hash` every later stage checks. Refuses several primary metrics, a zero effect size, or a missing refutation criterion. |
+| `design-experiment` | **DESIGN** — power analysis against the preregistered effect, the **holdout level the claim requires** (distribution → OOD → unseen tasks → unseen domains), the clustering penalty that makes N tasks × K runs worth far less than N·K, and a hard budget check. Refuses a holdout weaker than the claim, K<3, or an over-budget design. |
+| `validate-eval-task` | **🚦 GATE** — audits the *measuring instrument* against the **Agentic Benchmark Checklist** (task validity T.1–T.10, outcome validity O.\*, reporting R.1–R.13) plus two empirical checks: a trivial do-nothing agent must score ~0 and an oracle must solve 100%. Exits 5 on failure, and `scaffold-trials` refuses without `gate: PASS`. |
+| `scaffold-trials` | **SCAFFOLD** — generates a resumable, budget-capped runner (K runs/task/config, enforced `reset_env()`, recorded task-order seed, prereg + config hashes on every row), smoke-tested against a free built-in mock. `produces_results: false` — **the rollouts are your API spend**. |
+| `analyze-trials` | **ANALYZE** — clustered bootstrap CIs (resamples **tasks**, carrying their K runs), paired differences, observed ICC checked against the design's assumption, and a **cost–accuracy Pareto front**. Six-valued verdict; **refuses** the confirmatory claim on a `prereg_hash` mismatch, any unstamped row, a non-PASS validity gate, fewer than 30 shared tasks, or a verdict that flips across bootstrap seeds. |
+| `diagnose-failures` | **DIAGNOSE** — samples failures stratified by config, emits a labelling sheet against the **MAST** 14-mode / 3-category taxonomy, computes **Cohen's κ** between two independent annotators, and refuses to present the distribution as a finding below the threshold. |
+| `write-findings` | **REPORT** — assembles from the sidecars with the headline taken from `analysis.json`, not the author: it will not write a positive claim over a non-SUPPORTED verdict. Fills a reproducibility checklist from real values and always emits **"What this does NOT show"**. |
+
+*RAG research specialization* — for a retrieval-augmented-generation question the same spine applies, with three RAG-specific skills plugging into it (not a parallel pipeline). The honest split: retrieval metrics + contamination proxies run deterministically in-session; the LLM judge is your keys + budget.
+
+| Skill | What it does |
+|-------|--------------|
+| `check-rag-contamination` | **VALIDATE (evidence for the gate)** — deterministic RAG contamination proxies (gold-answer-retrievability, eval↔corpus n-gram overlap, a common-knowledge proxy, eval near-dups). Contamination is the RAG analog of leakage: on a contaminated set every system clusters within ~3%. Advisory (not the hard gate); memorization/paraphrase detection is deferred to a user-key stage. |
+| `bm25-retrieval-metrics` | **BASELINE + retrieval grader** — a pure-python BM25 baseline (deterministic, free, no keys) a fancier retriever must beat, scored with recall@k / precision@k / MRR / nDCG@k; grades any retriever via `--predictions`, and per-query scores feed a `trials.jsonl` `success`. Retrieval quality ≠ answer quality. |
+| `judge-rag-answers` | **GENERATION grader** — faithfulness / answer-relevance via an LLM judge (**your keys + budget**). Reports a bootstrap CI (never a bare mean), chance-corrected Cohen's **κ** vs a human set (never raw %), a verbosity diagnostic and a self-preference/circularity guard; a `mock` judge verifies the harness key-free but is **not a result**. Offline judge score ≠ production. |
 
 **Game agents** (the `game-agent-builder` pipeline — Kaggle "submit-an-agent" simulation competitions like Pokemon TCG AI Battle / Orbit Wars / ConnectX; each writes a Mermaid-led report + a JSON sidecar). It **scaffolds/evaluates/profiles — it does not train deep-RL** (defers to SB3/CleanRL) or run the live ladder:
 
@@ -187,7 +212,8 @@ pip install pillow                # optional: ultralytics, astropy, pycocotools
 
 ## Roadmap
 
-- **Analysis** ✅, **tabular modeling** ✅, **research** ✅, **game agents** ✅, **agent security** ✅, and **object-detection CV** ✅ pipelines are in place, end-to-end.
+- **Analysis** ✅, **tabular modeling** ✅, **paper-reading research** ✅, **research production** ✅, **game agents** ✅, **agent security** ✅, and **object-detection CV** ✅ pipelines are in place, end-to-end.
+- **Running the rollouts** is intentionally **out of scope** for `agent-researcher`, the same boundary `cv-modeler` draws around GPU-hours: it scaffolds a runnable, budget-capped harness and analyses what comes back, but the API spend is yours (agent evals reach ~$40k for ~22k rollouts).
 - **Live MLOps:** real (online) monitoring, drift alerting, and retraining triggers are intentionally **out of scope** for the offline tooling — `check-drift` / `readiness-check` are the honest offline stand-ins (they say what they cannot measure).
 - **Deep-model training** (deep-RL for game agents; the actual GPU fit for `cv-modeler`) is intentionally **out of scope** (GPU-hours, not a skill's job) — the pipelines scaffold/evaluate/profile and point at the real training tools (SB3/CleanRL; Ultralytics on your GPU).
 - **Vision-model security** (machine unlearning / backdoor & poison removal — e.g. a competition's poisoned-model sub-task) is a **flagged, unresearched future capability**: `cv-modeler` deliberately does *not* attempt it, and it is distinct from `agent-redteamer` (prompt-injection for tool-using agents, not vision backdoors). It needs its own grounded research round before any skill is built.
