@@ -62,6 +62,30 @@ detection_report.md
 preds*.csv
 submission.csv
 submission_coco.json
+# agent-researcher pipeline (research production — generated experiment artifacts)
+research_experiments/
+prereg.json
+research_question_brief.md
+experiment_design.json
+experiment_design.md
+task_validity.json
+task_validity_report.md
+trivial_probe.py
+trivial_results.jsonl
+trials_bundle/
+trials.jsonl
+smoke_trials.jsonl
+traces/
+smoke_traces/
+trials_manifest.json
+analysis.json
+analysis_report.md
+labeling_sheet.jsonl
+labels_*.jsonl
+failure_taxonomy.json
+failure_report.md
+findings.md
+reproducibility.json
 # ...but DO keep the skill TEMPLATES that share a generated-artifact filename
 !skills/*/templates/agent_task.json
 !skills/*/templates/redteam_task.json

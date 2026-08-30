@@ -49,6 +49,14 @@ SCRIPTS = {
     "query-sql": "skills/query-sql/scripts/run_sql.py",
     "report": "skills/report/scripts/build_report.py",
     "verify-analysis": "skills/verify-analysis/scripts/stat_tests.py",
+    # agent-researcher pipeline (research production)
+    "frame-research-question": "skills/frame-research-question/scripts/prereg.py",
+    "design-experiment": "skills/design-experiment/scripts/design.py",
+    "validate-eval-task": "skills/validate-eval-task/scripts/validate_task.py",
+    "scaffold-trials": "skills/scaffold-trials/scripts/scaffold_trials.py",
+    "analyze-trials": "skills/analyze-trials/scripts/analyze.py",
+    "diagnose-failures": "skills/diagnose-failures/scripts/diagnose.py",
+    "write-findings": "skills/write-findings/scripts/findings.py",
 }
 
 # (function name, [skills whose definition must be byte-identical])
@@ -70,11 +78,13 @@ GROUPS = [
     ("die", ["baseline-agent", "build-attack-chains", "harden-agent", "profile-agent",
              "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval",
              "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
-             "make-detection-submission"]),
+             "make-detection-submission",
+             'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings']),
     ("eprint", ["build-chart", "digest-paper", "discover-papers", "link-notes",
                 "profile-dataset", "query-sql", "report", "verify-analysis",
                 "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
-                "make-detection-submission"]),
+                "make-detection-submission",
+                'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings']),
     # research network fetch with retry/backoff (429/5xx + Retry-After) — must stay in sync
     ("http_get_bytes", ["discover-papers", "digest-paper"]),
     # cv-modeler pipeline: the canonical image_id, and the safety-critical leaky-split predicate
@@ -82,6 +92,11 @@ GROUPS = [
     ("is_leaky_provenance", ["split-images", "evaluate-detection", "scaffold-train"]),
     # agent-security defense-in-depth scope gate (must refuse identically everywhere)
     ("enforce_authorized_scope", ["build-attack-chains", "scaffold-attack", "run-redteam-eval"]),
+    # agent-researcher pipeline: the anti-HARKing hash. If these drift, a hypothesis edited after
+    # results exist stops being detectable — the whole preregistration guarantee rests on this.
+    ("prereg_hash", ["frame-research-question", "design-experiment", "validate-eval-task",
+                     "scaffold-trials", "analyze-trials", "write-findings"]),
+    ("load_trials", ["analyze-trials", "diagnose-failures"]),
 ]
 
 
