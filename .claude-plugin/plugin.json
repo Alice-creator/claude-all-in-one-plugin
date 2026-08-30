@@ -50,7 +50,14 @@
     "bootstrap",
     "ablation",
     "agent-evaluation",
-    "benchmark-validity"
+    "benchmark-validity",
+    "rag",
+    "retrieval-augmented-generation",
+    "bm25",
+    "retrieval-metrics",
+    "rag-evaluation",
+    "llm-as-judge",
+    "contamination"
   ],
   "skills": "./skills/",
   "agents": "./agents/",

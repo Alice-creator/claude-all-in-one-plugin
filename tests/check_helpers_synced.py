@@ -57,6 +57,10 @@ SCRIPTS = {
     "analyze-trials": "skills/analyze-trials/scripts/analyze.py",
     "diagnose-failures": "skills/diagnose-failures/scripts/diagnose.py",
     "write-findings": "skills/write-findings/scripts/findings.py",
+    # RAG research specialization (plugs into the agent-researcher spine)
+    "bm25-retrieval-metrics": "skills/bm25-retrieval-metrics/scripts/bm25_retrieval_metrics.py",
+    "check-rag-contamination": "skills/check-rag-contamination/scripts/check_rag_contamination.py",
+    "judge-rag-answers": "skills/judge-rag-answers/scripts/judge_rag_answers.py",
 }
 
 # (function name, [skills whose definition must be byte-identical])
@@ -79,12 +83,14 @@ GROUPS = [
              "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval",
              "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
              "make-detection-submission",
-             'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings']),
+             'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings',
+             "bm25-retrieval-metrics", "check-rag-contamination", "judge-rag-answers"]),
     ("eprint", ["build-chart", "digest-paper", "discover-papers", "link-notes",
                 "profile-dataset", "query-sql", "report", "verify-analysis",
                 "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
                 "make-detection-submission",
-                'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings']),
+                'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings',
+                "bm25-retrieval-metrics", "check-rag-contamination", "judge-rag-answers"]),
     # research network fetch with retry/backoff (429/5xx + Retry-After) — must stay in sync
     ("http_get_bytes", ["discover-papers", "digest-paper"]),
     # cv-modeler pipeline: the canonical image_id, and the safety-critical leaky-split predicate
@@ -97,6 +103,10 @@ GROUPS = [
     ("prereg_hash", ["frame-research-question", "design-experiment", "validate-eval-task",
                      "scaffold-trials", "analyze-trials", "write-findings"]),
     ("load_trials", ["analyze-trials", "diagnose-failures"]),
+    # RAG research specialization: the pure-python BM25 + tokenizer copied across the two retrieval-side skills
+    ("tokenize", ["bm25-retrieval-metrics", "check-rag-contamination"]),
+    ("build_bm25", ["bm25-retrieval-metrics", "check-rag-contamination"]),
+    ("bm25_scores", ["bm25-retrieval-metrics", "check-rag-contamination"]),
 ]
 
 

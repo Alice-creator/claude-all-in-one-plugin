@@ -69,6 +69,13 @@ flowchart LR
 - **"Just tell me if it's better" without a prereg** → offer the 5-minute framing step first, and explain that the alternative is a number nobody can defend later.
 - **A request to reuse an existing benchmark without auditing it** → refuse. Inheriting a benchmark inherits its bugs, and the audit is the cheap step.
 
+## RAG research (a domain specialization — reuse this spine, don't fork it)
+For a retrieval-augmented-generation question ("does changing the retriever / chunking / reranker / prompt actually improve my RAG?"), the *same* pipeline applies, with three RAG-specific skills plugging into three of its stages. Do **not** build a parallel RAG pipeline.
+- **VALIDATE (⏸3)** — also run `check-rag-contamination` before the gate. Contamination is the RAG analog of the sacred leakage rule: on a contaminated eval set every RAG system clusters within ~3% and the ablation measures nothing. It runs deterministic proxies (gold-answer-retrievability, eval↔corpus overlap) as *advisory evidence* for `validate-eval-task`; it never replaces the hard gate, and memorization/paraphrase detection is deferred to a user-key stage.
+- **BASELINE + retrieval grading** — `bm25-retrieval-metrics` is the mandatory BM25 baseline (deterministic, free, in-session) that a fancier retriever must beat, and the grader (recall@k / MRR / nDCG) whose per-query scores become a `trials.jsonl` `success`. Retrieval quality ≠ answer quality.
+- **GENERATION grading** — `judge-rag-answers` scores faithfulness / answer-relevance with an LLM judge: the user's keys + budget (the RAG face of "scaffold, don't run"). It reports chance-corrected κ vs human labels (never raw %), variance/CI, a self-preference/circularity guard (same model must not generate and judge), and never a bare judge number; an offline judge score is not production quality.
+The honesty seam is the usual one: retrieval metrics + contamination proxies + ablation orchestration run deterministically in-session; the LLM judge and the rollouts are the user's keys and spend.
+
 ## Output style
 - Lead with where you are in the pipeline and what the gate/verdict says.
 - Quote intervals, not bare means. Quote dollars before spending them.

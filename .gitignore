@@ -86,6 +86,16 @@ failure_taxonomy.json
 failure_report.md
 findings.md
 reproducibility.json
+# RAG research specialization (retrieval metrics / contamination proxies / judge eval)
+retrieval_metrics.json
+retrieval_metrics_report.md
+rag_contamination.json
+rag_contamination_report.md
+judge_eval.json
+judge_eval_report.md
+per_query.jsonl
+bm25_per_query.jsonl
+retrieved.jsonl
 # ...but DO keep the skill TEMPLATES that share a generated-artifact filename
 !skills/*/templates/agent_task.json
 !skills/*/templates/redteam_task.json
