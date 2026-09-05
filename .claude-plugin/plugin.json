@@ -58,8 +58,5 @@
     "rag-evaluation",
     "llm-as-judge",
     "contamination"
-  ],
-  "skills": "./skills/",
-  "agents": "./agents/",
-  "hooks": "./hooks/hooks.json"
+  ]
 }
