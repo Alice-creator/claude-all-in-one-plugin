@@ -34,11 +34,10 @@ Stage 4 of the **cv-modeler** pipeline, and the CV analog of `evaluate-model`. I
 ## Steps
 1. **Run it** (project venv):
    ```bash
-   .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/evaluate-detection/scripts/evaluate_detection.py" \
+   .venv/bin/python "${CLAUDE_SKILL_DIR}/scripts/evaluate_detection.py" \
        --predictions preds.csv --annotations coco.json --class-map cv_train_scaffold/class_map.json \
        --split image_splits/ [--iou 0.5] [--coco] [--no-pycocotools]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/evaluate-detection/scripts/evaluate_detection.py`.)
    `pycocotools` is optional but preferred (`.venv/bin/pip install pycocotools`).
 2. **Read the provenance badge first.** If it's red (per-image) or ❓ (unknown), the mAP is untrustworthy — fix
    the split before believing the number.

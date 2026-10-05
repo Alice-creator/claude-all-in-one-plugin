@@ -26,10 +26,9 @@ This skill trains both, scores them on the dev split, and writes the "number to 
 3. **Ensure deps & run:**
    ```bash
    python3 -c "import pandas, sklearn" 2>/dev/null || pip install pandas scikit-learn pyarrow
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/baseline/scripts/baseline.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/baseline.py" \
        --splits-dir "<dir from split-dataset>" --target <col> [--task auto] [--eval-on val]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/baseline/scripts/baseline.py`.)
 4. **Read the result, don't just dump it.** Lead with the verdict: how far does the simple model beat the dummy, and what is the number to beat? Flag a weak signal (simple ≈ dummy → reconsider features or whether ML fits) or an already-strong simple model (a complex model may add little).
 5. **Hand off:** the predictions file → `evaluate-model` for deeper analysis (slices, error buckets). The "number to beat" → the bar for any complex model in `train-tune`.
 

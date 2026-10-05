@@ -25,11 +25,11 @@ It is **framework-agnostic on purpose**: it never loads a `.pkl`/checkpoint, so 
 2. **Ensure deps & run:**
    ```bash
    python3 -c "import pandas, sklearn" 2>/dev/null || pip install pandas scikit-learn pyarrow
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/evaluate-model/scripts/evaluate.py" "<predictions-file>" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/evaluate.py" "<predictions-file>" \
        [--task auto] [--y-true y_true] [--y-pred y_pred] [--score-col y_score] \
        [--slice-by col1,col2] [--min-slice-n 20]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/evaluate-model/scripts/evaluate.py`. Slice columns are auto-picked if `--slice-by` is omitted.)
+   (Slice columns are auto-picked if `--slice-by` is omitted.)
 3. **Interpret — lead with the story, not the table.** State the headline metric, then the *worst slice* and how far it lags the overall — that's the actionable finding. Compare against the `baseline` number to beat.
 4. **Direct the next move.** Recommend reading ~100 errors from the worst slice by hand to find fixable categories (→ targeted data collection / feature work), or re-running on `test` once model choice is locked.
 

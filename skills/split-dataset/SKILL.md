@@ -11,7 +11,7 @@ Turn one clean table into **train / val / test** without leaking. This is the hi
 This skill chooses the split *method* to match how the data leaks, runs a bundled script, and writes the splits plus a verifiable report.
 
 ## When to use
-- Right after `profile-dataset` / `clean-data`, before any baseline or modeling.
+- Once the data is profiled and cleaned, before any baseline or modeling.
 - Any time data has **entities** (multiple rows per user/customer/VIN/patient), a **time** dimension, or **class imbalance** — i.e. almost always.
 - When metrics look suspiciously good and you suspect train/test contamination.
 
@@ -38,17 +38,16 @@ flowchart TD
 - **Stratify** keeps class proportions equal across splits; essential for imbalanced targets.
 
 ## Steps
-1. **Confirm the data is clean** (profiled/cleaned). If not, send the user to `profile-dataset` / `clean-data` first.
+1. **Confirm the data is clean** (profiled/cleaned). If not, ask the user to clean it first.
 2. **Ask the 3 questions** that pick the method: (a) is there a **time** column you predict forward from? (b) are there **repeated entities** (a group key)? (c) is the target **classification** (stratify) or regression? Also note class imbalance and dataset size.
 3. **Propose the split plan** — method, target, group/time column, ratios, seed — and confirm. Default ratios `0.7/0.15/0.15`; for very large data (≫100k rows) shrink val/test fractions (Ng: the *fraction* drops as absolute counts stay ample), e.g. `0.9,0.05,0.05`.
 4. **Ensure deps & run:**
    ```bash
    python3 -c "import pandas, sklearn" 2>/dev/null || pip install pandas scikit-learn pyarrow openpyxl
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/split-dataset/scripts/split.py" "<clean-file>" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/split.py" "<clean-file>" \
        --target <col> [--task auto] [--group <col>] [--time <col>] \
        [--ratios 0.7,0.15,0.15] [--stratify auto] [--drop-duplicates] [--seed 42]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/split-dataset/scripts/split.py`.)
 5. **Verify the report** — open `split_report.md`. Confirm: no row overlap, no group overlap (group method), class balance / target distribution comparable across splits, duplicates handled. Flag anything off before declaring done.
 6. **Hand off with the discipline reminder:** downstream, fit all transforms on **train only**. Recommend `baseline` next.
 

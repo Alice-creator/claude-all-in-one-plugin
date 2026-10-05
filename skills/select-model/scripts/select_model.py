@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recommend a model family from a data fingerprint — claude-all-in-one-plugin.
+"""Recommend a model family from a data fingerprint — claude-research-template.
 
 ADVISORY ONLY: computes a "fingerprint" of the train split (size, features,
 categorical cardinality, task, balance, modality flags), runs a research-grounded

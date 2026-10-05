@@ -27,10 +27,10 @@ It scaffolds the **interface and safety wrapper, not the strategy** — the defa
 2. **Ensure deps (optional but recommended) & run:**
    ```bash
    python3 -c "import kaggle_environments" 2>/dev/null || pip install kaggle-environments
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/scaffold-submission/scripts/scaffold_submission.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/scaffold_submission.py" \
        --task-json agent_task.json [--out-dir <env>_submission] [--policy random_legal|first_legal]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/scaffold-submission/scripts/scaffold_submission.py`.) `kaggle_environments` is only needed for the local smoke test — the bundle still generates without it.
+   `kaggle_environments` is only needed for the local smoke test — the bundle still generates without it.
 3. **Read the smoke-test result, don't just dump it.** If installed + env id known, the script runs several episodes of `[main.py, "random"]` and reports the illegal/timeout rate. A clean run is a strong check (not a proof); **any illegal move means the fallback can't see this env's legality — fix it before going further** (don't submit on a red smoke test). Tune coverage with `--smoke-episodes`.
 4. **Point out the two TODOs that matter:** the `=== YOUR POLICY ===` block (random-legal until you fill it) and, for structured-action envs, the action-construction `TODO`.
 5. **Hand off:** the bundle → `baseline-agent` (drop in a heuristic + measure it with a crash/timeout health check).

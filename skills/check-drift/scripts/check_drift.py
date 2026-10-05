@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Population drift between two data snapshots — claude-all-in-one-plugin.
+"""Population drift between two data snapshots — claude-research-template.
 
 Given a REFERENCE snapshot (what the model was trained on) and a CURRENT snapshot
 (a new batch), compute per-feature drift (PSI, primary) and write drift_report.md.

@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# competition data is usually not redistributable — keep it local
+data/raw/*
+data/external/*
+data/processed/*
+!data/*/.gitkeep
+
+# model weights and run outputs
+models/
+*.pt
+*.pth
+*.onnx
+catboost_info/
+
+# local Claude Code state
+.claude/

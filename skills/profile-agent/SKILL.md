@@ -26,10 +26,10 @@ It's the agent counterpart of `evaluate-model`'s slice analysis: find the worst 
 1. **Need a ladder first.** Run `self-play-eval` to produce `ladder_summary.json`.
 2. **Run:**
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/profile-agent/scripts/profile_agent.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/profile_agent.py" \
        --ladder ladder_summary.json [--metric <env>_submission/baseline_agent_metric.json] [--focus <agent name>]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/profile-agent/scripts/profile_agent.py`.) Default focus is the top-rated agent.
+   Default focus is the top-rated agent.
 3. **Read the profile.** Lead with legality (any invalid rate?), then the weakest matchup, then the prioritized next-step hypotheses.
 4. **Loop:** apply one change → `self-play-eval` again → confirm the rating moved the right way. The `game-agent-builder` conductor gates the final submission on a clean run.
 

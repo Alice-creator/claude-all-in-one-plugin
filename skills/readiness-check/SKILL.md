@@ -25,9 +25,9 @@ Turn *"the metric looks good"* into an **evidence-backed readiness verdict**. Af
 1. **Run the pipeline first** (split → baseline → train-tune → evaluate-model). readiness-check audits their outputs.
 2. **Run it** (pure stdlib — no extra deps):
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/readiness-check/scripts/readiness_check.py" --pipeline-dir "<name>_splits"
+   python3 "${CLAUDE_SKILL_DIR}/scripts/readiness_check.py" --pipeline-dir "<name>_splits"
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/readiness-check/scripts/readiness_check.py`. It globs the tree, so nested out-dirs like `train-tune/evaluation/` are found.)
+   (It globs the tree, so nested out-dirs like `train-tune/evaluation/` are found.)
 3. **Read the verdict + gaps.** Lead with the offline-readiness fraction and label, then the **Gaps to close** list (each points back to the upstream skill to re-run). State plainly that a high score is **not** a deploy approval.
 4. **Hand off:** point to `check-drift` as the only offline monitoring proxy once a new data batch exists.
 

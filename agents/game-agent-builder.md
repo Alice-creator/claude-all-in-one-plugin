@@ -38,20 +38,20 @@ flowchart LR
    **⏸ CHECKPOINT 1 — interface + approach.** Present the brief and the `unknowns[]`. Confirm the env id / interface (or that it's unverified), and the starting approach (`scripted` by default). If the runtime is custom (not `kaggle_environments`), say the scaffold can't target it and point at the comp's starter code.
 
 2. **Scaffold the bundle** — follow `scaffold-submission`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/scaffold-submission/scripts/scaffold_submission.py" --task-json agent_task.json`
+   `.venv/bin/python "$HOME/.claude/skills/scaffold-submission/scripts/scaffold_submission.py" --task-json agent_task.json`
    It writes `<env>_submission/` with `main.py`, `submission.tar.gz` (main.py at root), and `submission_manifest.json`, and smoke-tests locally if `kaggle_environments` is installed. Report whether it ran. Note the two TODOs (the policy block; structured-action construction).
 
 3. **Baseline the agent** — write a heuristic into the policy block, then follow `baseline-agent`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/baseline-agent/scripts/baseline_agent.py" --task-json agent_task.json`
+   `.venv/bin/python "$HOME/.claude/skills/baseline-agent/scripts/baseline_agent.py" --task-json agent_task.json`
    It writes `baseline_agent_metric.json` (+ report) with win rate vs random and a **health** status.
    **⏸ CHECKPOINT 2 — healthy + strong enough?** If health is `FAIL` (any crash/timeout), STOP and fix the agent before proceeding. If `PASS`, present the win rate + recommendation. If `scripted_sufficient`, surface that RL's training cost may not be worth it.
 
 4. **Rate on a local ladder** — follow `self-play-eval` with a pool (your bot, prior versions, the random floor, builtins):
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/self-play-eval/scripts/self_play_eval.py" --task-json agent_task.json --agents <env>_submission/main.py random`
+   `.venv/bin/python "$HOME/.claude/skills/self-play-eval/scripts/self_play_eval.py" --task-json agent_task.json --agents <env>_submission/main.py random`
    It writes `ladder_summary.json` (+ report). Lead with the offline≠Kaggle caveat; surface any invalid-move rate.
 
 5. **Profile + iterate** — follow `profile-agent`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/profile-agent/scripts/profile_agent.py" --ladder ladder_summary.json --metric <env>_submission/baseline_agent_metric.json`
+   `.venv/bin/python "$HOME/.claude/skills/profile-agent/scripts/profile_agent.py" --ladder ladder_summary.json --metric <env>_submission/baseline_agent_metric.json`
    Read the weakest matchup and the next-step hypotheses. Apply one change → re-run `self-play-eval` → confirm the rating moved the right way.
 
 ## The final-submission gate (the test-lock analog)

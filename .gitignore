@@ -2,26 +2,14 @@ __pycache__/
 *.pyc
 .venv/
 .DS_Store
-*_clean.parquet
-*_clean.csv
-cleaning_log.md
 
-# test datasets + generated splits/reports (not part of the plugin)
+# test datasets + generated splits/reports (not part of the repo)
 data/
 # generated skill artifacts
 problem_framing_brief.md
 *_splits/
-# local Claude Code state (permission grants etc., not plugin content)
+# local Claude Code state (permission grants etc., not repo content)
 .claude/
-# personal research working files (keep interests.example.json; your own config/notes are yours)
-research/interests.json
-research/scimagojr.csv
-research/candidates/
-research/notes/
-research/index.md
-research/index.json
-research/recall.md
-research/recall_log.json
 # downloaded datasets + library training logs
 *.zip
 catboost_info/
@@ -36,17 +24,6 @@ ladder_summary.json
 ladder_report.md
 agent_profile.json
 agent_profile_report.md
-# agent-security pipeline (red-team artifacts — keep these local)
-redteam_task.json
-redteam_brief.md
-redteam_summary.json
-redteam_eval_report.md
-*_attack/
-attack_chains.json
-attack_chains_report.md
-hardening_summary.json
-hardening_report.md
-defended_target.py
 # cv-modeler pipeline (object detection — generated inspection/split/bundle/eval/submission artifacts)
 image_inspection.json
 image_inspection_report.md
@@ -62,40 +39,7 @@ detection_report.md
 preds*.csv
 submission.csv
 submission_coco.json
-# agent-researcher pipeline (research production — generated experiment artifacts)
-research_experiments/
-prereg.json
-research_question_brief.md
-experiment_design.json
-experiment_design.md
-task_validity.json
-task_validity_report.md
-trivial_probe.py
-trivial_results.jsonl
-trials_bundle/
-trials.jsonl
-smoke_trials.jsonl
-traces/
-smoke_traces/
-trials_manifest.json
-analysis.json
-analysis_report.md
-labeling_sheet.jsonl
-labels_*.jsonl
-failure_taxonomy.json
-failure_report.md
-findings.md
-reproducibility.json
-# RAG research specialization (retrieval metrics / contamination proxies / judge eval)
-retrieval_metrics.json
-retrieval_metrics_report.md
-rag_contamination.json
-rag_contamination_report.md
-judge_eval.json
-judge_eval_report.md
-per_query.jsonl
-bm25_per_query.jsonl
-retrieved.jsonl
 # ...but DO keep the skill TEMPLATES that share a generated-artifact filename
 !skills/*/templates/agent_task.json
-!skills/*/templates/redteam_task.json
+# the competition template ships its own empty data/ skeleton and .gitignore
+!template/data/

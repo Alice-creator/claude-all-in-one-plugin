@@ -37,11 +37,11 @@ It works on image **stems** (ids) only — it never loads pixels — and it enfo
 ## Steps
 1. **Run it** (project venv):
    ```bash
-   .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/split-images/scripts/split_images.py" \
+   .venv/bin/python "${CLAUDE_SKILL_DIR}/scripts/split_images.py" \
        (--images <dir> | --annotations coco.json) --inspection image_inspection.json \
        --group-by '<regex|coco:field|none>' [--k 5 | --val-frac 0.2] [--seed 42] [--out image_splits]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/split-images/scripts/split_images.py`.) Needs scikit-learn + numpy (already in the venv).
+   Needs scikit-learn + numpy (already in the venv).
 2. **Pick `--group-by` from inspect-images' candidates** (or a COCO source field). Match the group count to the
    data's real sources: tiles of one frame → one group; frames of one exposure → one group. If nothing in the
    filename captures the source, the key is elsewhere (FITS headers) — don't force a per-image split.

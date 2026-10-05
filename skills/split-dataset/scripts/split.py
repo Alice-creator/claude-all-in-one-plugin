@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Leakage-safe train/val/test splitter for claude-all-in-one-plugin.
+"""Leakage-safe train/val/test splitter for claude-research-template.
 
 Splits a (cleaned) tabular dataset into train/val/test using a method chosen to
 avoid the common leakage traps:

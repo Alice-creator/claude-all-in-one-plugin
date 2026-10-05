@@ -1,0 +1,42 @@
+{
+  "name": null,
+  "platform": null,
+  "url": null,
+  "track": null,
+  "task": null,
+  "metric": {
+    "name": null,
+    "direction": null,
+    "notes": null
+  },
+  "deadlines": {
+    "final_submission": null,
+    "entry": null,
+    "team_merger": null,
+    "timezone": "UTC"
+  },
+  "rules": {
+    "rules_url": null,
+    "rules_accepted": false,
+    "external_data_allowed": null,
+    "pretrained_models_allowed": null,
+    "team_size_max": null
+  },
+  "submission": {
+    "format_file": null,
+    "daily_limit": null,
+    "final_selection_count": null,
+    "code_competition": null,
+    "runtime_limit_hours": null,
+    "internet_allowed": null
+  },
+  "leaderboard": {
+    "public_fraction": null,
+    "notes": null
+  },
+  "validation": {
+    "scheme": null,
+    "mirrors_test_because": null
+  },
+  "notes": null
+}

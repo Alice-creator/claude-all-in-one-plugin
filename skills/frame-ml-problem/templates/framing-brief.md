@@ -70,4 +70,4 @@ flowchart LR
 ## 8. Decision & next step
 - **Recommendation:** <ship heuristic / build model / run prototype>
 - **❓ OPEN questions blocking progress:** <list>
-- **Next skill / action:** <`profile-dataset` · ship heuristic + instrument · time-boxed prototype>
+- **Next skill / action:** <profile + clean data → `split-dataset` · ship heuristic + instrument · time-boxed prototype>

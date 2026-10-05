@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-deployment readiness audit of a pipeline directory — claude-all-in-one-plugin.
+"""Pre-deployment readiness audit of a pipeline directory — claude-research-template.
 
 Inspects the artifacts the modeling pipeline wrote (split_summary.json,
 baseline_metric.json, tuned_metric.json, experiments.jsonl, evaluation_report.md)
