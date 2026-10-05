@@ -27,11 +27,10 @@ Primary metric is **PSI** (Population Stability Index), which is bounded and sta
 2. **Ensure deps & run:**
    ```bash
    python3 -c "import pandas, scipy" 2>/dev/null || pip install pandas scipy pyarrow
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/check-drift/scripts/check_drift.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/check_drift.py" \
        --splits-dir "<dir from split-dataset>" --current "<new batch>" \
        [--target <col>] [--pred-col y_pred] [--pvalues] [--psi-thresholds 0.1,0.25]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/check-drift/scripts/check_drift.py`.)
 3. **Read the verdict.** Lead with overall (stable / moderate / major) and the **top-PSI features**. Treat a big PSI as *possibly an upstream data-pipeline/schema bug*, not necessarily a real-world shift — check the feeding pipeline.
 4. **Decide, honestly.** If major drift and labels later arrive → run `evaluate-model` on the labelled batch to confirm actual degradation. Drift alone never justifies a retrain.
 

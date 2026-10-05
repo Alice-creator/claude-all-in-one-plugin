@@ -6,7 +6,7 @@ allowed-tools: Bash, Read, Write, Glob
 
 # inspect-images
 
-Stage 1 of the **cv-modeler** (computer-vision) pipeline. The fastest way to ship an inflated CV metric is to (a) let a 16-bit astronomical image get 8-bit-truncated so faint signal vanishes, or (b) split near-duplicate images across train/val so the model "memorizes" the val set. This skill surfaces both **before** you split or train — it is the CV analog of `profile-dataset` for tabular data.
+Stage 1 of the **cv-modeler** (computer-vision) pipeline. The fastest way to ship an inflated CV metric is to (a) let a 16-bit astronomical image get 8-bit-truncated so faint signal vanishes, or (b) split near-duplicate images across train/val so the model "memorizes" the val set. This skill surfaces both **before** you split or train.
 
 It does **not** decide the split or train anything. It inspects, measures honestly, and writes a sidecar that `split-images` reads.
 
@@ -33,10 +33,9 @@ It does **not** decide the split or train anything. It inspects, measures honest
 ## Steps
 1. **Run it** (project venv):
    ```bash
-   .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/inspect-images/scripts/inspect_images.py" \
+   .venv/bin/python "${CLAUDE_SKILL_DIR}/scripts/inspect_images.py" \
        --images <image_dir> [--annotations annotations_coco.json] [--sample 0] [--out image_inspection.json]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/inspect-images/scripts/inspect_images.py`.)
    Needs Pillow (`.venv/bin/pip install pillow`) + numpy; `astropy` only if you point it at `.fits` files.
 2. **Read the three signals, don't just dump them:**
    - **Bit depth** — if `is_16bit`, remember scaffold-train must normalize before YOLO.

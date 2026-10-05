@@ -31,7 +31,7 @@ This is a sibling to `model-builder` (tabular) and `game-agent-builder` (agent c
 - **Vision-model security / machine-unlearning is OUT OF SCOPE.** If the competition also ships a poisoned model
   + an unlearn set (e.g. ESA "Secure Your AI"), you do the DETECTION sub-task only. **Do NOT write any
   unlearning / backdoor-removal / poison-cleaning code — not even ad hoc.** That capability is unresearched here
-  and is distinct from `agent-redteamer` (which is prompt-injection for tool-using agents, not vision backdoors).
+  and is out of scope for this plugin.
   Say so plainly and state the competition entry is incomplete without it.
 - **Stop at every checkpoint.** Run up to the gate, then STOP: report what you found, the decision needed, and
   concrete options. When run non-interactively, end your turn at the checkpoint and wait to be resumed.
@@ -57,7 +57,7 @@ flowchart LR
 ```
 
 1. **Inspect the data** — follow `inspect-images`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/inspect-images/scripts/inspect_images.py" --images <dir> [--annotations coco.json] --sample 0`
+   `.venv/bin/python "$HOME/.claude/skills/inspect-images/scripts/inspect_images.py" --images <dir> [--annotations coco.json] --sample 0`
    Reports bit-depth (16-bit ⚠️), an augmentation-aware near-dup detector (with a reliability flag), and
    provenance group-key candidates. Writes `image_inspection.json` + report.
    **⏸ CHECKPOINT 1 — data facts.** Confirm: is it 16-bit (scaffold-train must normalize)? Is the dup detector
@@ -66,12 +66,12 @@ flowchart LR
    look at FITS headers / a manifest.
 
 2. **Split leakage-safe** — follow `split-images`, passing the inspection sidecar and the chosen key:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/split-images/scripts/split_images.py" --images <dir> [--annotations coco.json] --inspection image_inspection.json --group-by '<regex|coco:field|none>' [--k 5 | --val-frac 0.2]`
+   `.venv/bin/python "$HOME/.claude/skills/split-images/scripts/split_images.py" --images <dir> [--annotations coco.json] --inspection image_inspection.json --group-by '<regex|coco:field|none>' [--k 5 | --val-frac 0.2]`
    Confirm the integrity block: `dup_clusters_straddling_folds==0` and the provenance. A `per-image-ACKED-leaky`
    provenance means every future metric is suspect — surface that.
 
 3. **Scaffold the training bundle** — follow `scaffold-train`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/scaffold-train/scripts/scaffold_train.py" --images <dir> --annotations coco.json --splits image_splits/`
+   `.venv/bin/python "$HOME/.claude/skills/scaffold-train/scripts/scaffold_train.py" --images <dir> --annotations coco.json --splits image_splits/`
    It writes a YOLO bundle (class_map, prepare_data.py, train.py, predict.py, data.yaml, pinned requirements),
    normalizes 16-bit per-image, and runs a CPU smoke test.
    **⏸ CHECKPOINT 2 — smoke + hand to GPU.** Report the smoke line. `executed_without_error` with
@@ -80,13 +80,13 @@ flowchart LR
    GPU** (`prepare_data.py` → edit `train_config.yaml` → `train.py` → `predict.py`). This is NOT a trained model.
 
 4. **Evaluate honestly** — after the user trains and produces `preds.csv`, follow `evaluate-detection`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/evaluate-detection/scripts/evaluate_detection.py" --predictions preds.csv --annotations coco.json --class-map <bundle>/class_map.json --split image_splits/ [--coco]`
+   `.venv/bin/python "$HOME/.claude/skills/evaluate-detection/scripts/evaluate_detection.py" --predictions preds.csv --annotations coco.json --class-map <bundle>/class_map.json --split image_splits/ [--coco]`
    **⏸ CHECKPOINT 3 — trust the number?** Lead with the split-provenance badge and the metric definition. If
    provenance is per-image/unknown, the mAP is untrustworthy. Confirm the metric matches the competition's
    (VOC@0.5 vs COCO 0.50:0.95). Prefer pycocotools when installed.
 
 5. **Format the submission** — follow `make-detection-submission`:
-   `.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/make-detection-submission/scripts/make_detection_submission.py" --predictions preds.csv --sample-submission sample_submission.csv [--format streak|coco] [--box-order conf,x,y,w,h]`
+   `.venv/bin/python "$HOME/.claude/skills/make-detection-submission/scripts/make_detection_submission.py" --predictions preds.csv --sample-submission sample_submission.csv [--format streak|coco] [--box-order conf,x,y,w,h]`
    **⏸ CHECKPOINT 4 — ship?** Confirm the box order/units against the comp's sample (the tool can't), that every
    sample image is present, and that the submission isn't empty/sparse. The submit action is the human's.
 

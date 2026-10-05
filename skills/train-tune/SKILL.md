@@ -29,11 +29,11 @@ Bounded to **tabular** models (scikit-learn + optional gradient-boosting libs). 
 2. **Ensure deps & run:**
    ```bash
    python3 -c "import pandas, sklearn" 2>/dev/null || pip install pandas scikit-learn pyarrow
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/train-tune/scripts/train_tune.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/train_tune.py" \
        --splits-dir "<dir from split-dataset>" --target <col> \
        [--model gbt|rf|linear|xgb|lgbm|catboost] [--n-iter 40] [--cv 5] [--seed 42]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/train-tune/scripts/train_tune.py`. `--n-iter` ≈ 40–60 is a sane default; ~60 random draws give a high chance of sampling the top few % of the search *distribution* — Bergstra & Bengio 2012 — it's a budget, not an optimality proof.)
+   (`--n-iter` ≈ 40–60 is a sane default; ~60 random draws give a high chance of sampling the top few % of the search *distribution* — Bergstra & Bengio 2012 — it's a budget, not an optimality proof.)
 3. **Read the verdict.** Lead with: did the tuned model beat the baseline, and by how much? Surface the leakage statement and the biased-CV caveat so the number is understood correctly.
 4. **Hand off:** `tuned_predictions.csv` → `evaluate-model` for slice/error analysis. The run is logged in `experiments.jsonl` (re-runnable with the same flags + seed).
 

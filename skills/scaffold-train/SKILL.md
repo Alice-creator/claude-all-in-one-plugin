@@ -41,11 +41,11 @@ Stage 3 of the **cv-modeler** pipeline, and the CV analog of `scaffold-submissio
 ## Steps
 1. **Run it** (project venv):
    ```bash
-   .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/scaffold-train/scripts/scaffold_train.py" \
+   .venv/bin/python "${CLAUDE_SKILL_DIR}/scripts/scaffold_train.py" \
        --images <dir> --annotations coco.json --splits image_splits/ \
        [--model yolo11n.pt] [--imgsz 640] [--epochs 100] [--out-dir cv_train_scaffold] [--no-smoke]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/scaffold-train/scripts/scaffold_train.py`.) `ultralytics`
+   `ultralytics`
    is only needed for the smoke training step — the bundle generates without it (exit note, not exit error).
 2. **Read the smoke line, don't just dump it.** ✅ = pipeline runs. ❌ at `prepare_data` (0 labels) means the
    split ids / category ids don't line up — fix that before spending GPU. A YOLO-train failure is usually a

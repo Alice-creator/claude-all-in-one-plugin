@@ -1,6 +1,6 @@
 ---
 name: verify-analysis
-description: VALIDATE candidate EDA findings / hypotheses against a clean dataset before anyone reports or acts on them. For each claim ("X correlates with Price", "group A has higher Y", "category drives Z") it picks the right statistical test, checks effect size AND significance, re-checks stability on random subsamples, watches for obvious confounders, and returns a per-finding verdict (confirmed / weak / refuted) with stat evidence. Default stance is SKEPTICISM — guards against the EDA "everything correlates" trap. Use as the Validate stage after eda / eda-analyst, or whenever someone wants a finding stress-tested.
+description: VALIDATE candidate EDA findings / hypotheses against a clean dataset before anyone reports or acts on them. For each claim ("X correlates with Price", "group A has higher Y", "category drives Z") it picks the right statistical test, checks effect size AND significance, re-checks stability on random subsamples, watches for obvious confounders, and returns a per-finding verdict (confirmed / weak / refuted) with stat evidence. Default stance is SKEPTICISM — guards against the EDA "everything correlates" trap. Use after exploratory analysis, or whenever someone wants a finding stress-tested.
 tools: Bash, Read, Write, Edit, Glob
 ---
 
@@ -20,7 +20,7 @@ Use the project venv `.venv/bin/python` for everything. Create/populate it once 
 `python3 -m venv .venv && .venv/bin/pip install -q pandas numpy pyarrow openpyxl scipy`
 
 ## Inputs
-- A **clean** tabular file (if it isn't clean, run `data-cleaner` first — validating dirty data validates artifacts).
+- A **clean** tabular file (if it isn't clean, clean it first — validating dirty data validates artifacts).
 - A list of candidate findings to test. If none are given, read any existing EDA notebook / report (Glob for `*_eda.ipynb`, `*report*.md`) and extract the claimed relationships, or derive them from the top correlations / group differences.
 
 ## Pick the right test (per finding)
@@ -37,7 +37,7 @@ Use the project venv `.venv/bin/python` for everything. Create/populate it once 
 1. **List the findings** to test as a short checklist (one line each). State the test you'll use for each.
 2. **Run the helper** per finding:
    ```bash
-   .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/verify-analysis/scripts/stat_tests.py" \
+   .venv/bin/python "$HOME/.claude/skills/verify-analysis/scripts/stat_tests.py" \
      "<clean-file>" --test corr|group|anova|chi2 --x COL --y COL [--by CONFOUNDER]
    ```
    It prints JSON with the statistic, `p_value`, `effect_size`, a `verdict`, a `stability` block (mean/variance across random splits, `sign_flips`, `stable`), and — when `--by` is given — a `confounder_check` that re-runs the test inside the largest stratum of the confounder.

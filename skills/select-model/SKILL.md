@@ -30,11 +30,10 @@ Turn "what model should I use?" into a **defensible, cited recommendation** inst
 4. **Ensure deps & run:**
    ```bash
    python3 -c "import pandas, sklearn" 2>/dev/null || pip install pandas scikit-learn pyarrow
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/select-model/scripts/select_model.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/select_model.py" \
        --splits-dir "<dir from split-dataset>" --target <col> \
        [--modality tabular] [--interpretability none] [--latency none]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/select-model/scripts/select_model.py`.)
 5. **Read back the verdict, surface the flags.** Lead with the recommended family + why + the number to beat. If the script printed modality flags, raise them and confirm modality before trusting the recommendation. State any veto that fired.
 6. **Hand off:** `train-tune --model <family>` on the same splits → then `evaluate-model` on its predictions.
 

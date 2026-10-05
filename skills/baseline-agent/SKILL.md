@@ -26,10 +26,9 @@ This skill measures whatever policy is in your agent file (the one `scaffold-sub
 2. **Ensure deps & run:**
    ```bash
    python3 -c "import kaggle_environments" 2>/dev/null || pip install kaggle-environments
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/baseline-agent/scripts/baseline_agent.py" \
+   python3 "${CLAUDE_SKILL_DIR}/scripts/baseline_agent.py" \
        --task-json agent_task.json [--agent <env>_submission/main.py] [--opponent random] [--episodes 50] [--seed 42]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/baseline-agent/scripts/baseline_agent.py`.)
 3. **Read the verdict, lead with health.** If `FAIL`, STOP — report the crash/timeout counts and fix the agent before anything else. If `PASS`, report the win rate and the recommendation.
 4. **Hand off:** the agent + `baseline_agent_metric.json` → `self-play-eval` (rate it on a local ladder vs multiple opponents).
 

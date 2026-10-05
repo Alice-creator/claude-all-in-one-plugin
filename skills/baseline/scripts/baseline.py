@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Establish a baseline for a split dataset — claude-all-in-one-plugin.
+"""Establish a baseline for a split dataset — claude-research-template.
 
 Trains the floor (a Dummy predictor) and one deliberately simple real model
 (LogisticRegression / LinearRegression) on `train`, scores them on `val`, and

@@ -9,7 +9,7 @@ Run: python3 tests/check_helpers_synced.py   (exit 0 = in sync, 1 = drift, 2 = s
 Intentional divergences are simply NOT grouped together (documented inline):
 - split-dataset has its own richer load()/find_split()/infer_task() (handles xlsx/json,
   a y=None 'unknown' task) — excluded.
-- profile-dataset/build-chart/verify-analysis have their own loaders — excluded.
+- verify-analysis has its own loader — excluded.
 - fmt has two intended variants (plain vs None/nan-aware) — checked as two groups.
 """
 import ast
@@ -29,38 +29,17 @@ SCRIPTS = {
     "baseline-agent": "skills/baseline-agent/scripts/baseline_agent.py",
     "self-play-eval": "skills/self-play-eval/scripts/self_play_eval.py",
     "profile-agent": "skills/profile-agent/scripts/profile_agent.py",
-    # agent-security pipeline
-    "run-redteam-eval": "skills/run-redteam-eval/scripts/run_redteam_eval.py",
-    "harden-agent": "skills/harden-agent/scripts/harden_agent.py",
-    "build-attack-chains": "skills/build-attack-chains/scripts/build_attack_chains.py",
-    "scaffold-attack": "skills/scaffold-attack/scripts/scaffold_attack.py",
     # cv-modeler pipeline (object detection)
     "inspect-images": "skills/inspect-images/scripts/inspect_images.py",
     "split-images": "skills/split-images/scripts/split_images.py",
     "scaffold-train": "skills/scaffold-train/scripts/scaffold_train.py",
     "evaluate-detection": "skills/evaluate-detection/scripts/evaluate_detection.py",
     "make-detection-submission": "skills/make-detection-submission/scripts/make_detection_submission.py",
-    # data / analysis / research scripts (share the eprint helper)
-    "build-chart": "skills/build-chart/scripts/chart.py",
-    "digest-paper": "skills/digest-paper/scripts/fetch_paper.py",
-    "discover-papers": "skills/discover-papers/scripts/discover.py",
-    "link-notes": "skills/link-notes/scripts/link_notes.py",
-    "profile-dataset": "skills/profile-dataset/scripts/profile.py",
-    "query-sql": "skills/query-sql/scripts/run_sql.py",
-    "report": "skills/report/scripts/build_report.py",
+    # competition stage (platform-agnostic)
+    "frame-competition": "skills/frame-competition/scripts/check_competition.py",
+    "check-submission": "skills/check-submission/scripts/check_submission.py",
+    # statistical verification
     "verify-analysis": "skills/verify-analysis/scripts/stat_tests.py",
-    # agent-researcher pipeline (research production)
-    "frame-research-question": "skills/frame-research-question/scripts/prereg.py",
-    "design-experiment": "skills/design-experiment/scripts/design.py",
-    "validate-eval-task": "skills/validate-eval-task/scripts/validate_task.py",
-    "scaffold-trials": "skills/scaffold-trials/scripts/scaffold_trials.py",
-    "analyze-trials": "skills/analyze-trials/scripts/analyze.py",
-    "diagnose-failures": "skills/diagnose-failures/scripts/diagnose.py",
-    "write-findings": "skills/write-findings/scripts/findings.py",
-    # RAG research specialization (plugs into the agent-researcher spine)
-    "bm25-retrieval-metrics": "skills/bm25-retrieval-metrics/scripts/bm25_retrieval_metrics.py",
-    "check-rag-contamination": "skills/check-rag-contamination/scripts/check_rag_contamination.py",
-    "judge-rag-answers": "skills/judge-rag-answers/scripts/judge_rag_answers.py",
 }
 
 # (function name, [skills whose definition must be byte-identical])
@@ -74,39 +53,20 @@ GROUPS = [
     ("reg_metrics", ["baseline", "train-tune"]),
     ("enforce_test_lock", ["baseline", "train-tune"]),
     ("fmt", ["baseline", "train-tune", "check-drift", "evaluate-model"]),  # None/nan-aware modeling variant
-    # game-agent + agent-security pipelines (a simpler {:.3f}/str fmt — its own group, NOT the modeling one)
-    ("fmt", ["baseline-agent", "self-play-eval", "profile-agent", "run-redteam-eval", "harden-agent"]),
+    # game-agent pipeline (a simpler {:.3f}/str fmt — its own group, NOT the modeling one)
+    ("fmt", ["baseline-agent", "self-play-eval", "profile-agent"]),
     ("agent_count", ["scaffold-submission", "baseline-agent", "self-play-eval"]),  # kaggle_environments player-count
     ("outcome", ["baseline-agent", "self-play-eval"]),  # win/draw/loss from episode rewards
     # cross-pipeline utility helpers copied byte-identical
-    ("die", ["baseline-agent", "build-attack-chains", "harden-agent", "profile-agent",
-             "run-redteam-eval", "scaffold-attack", "scaffold-submission", "self-play-eval",
+    ("die", ["frame-competition", "check-submission", "baseline-agent", "profile-agent", "scaffold-submission", "self-play-eval",
              "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
-             "make-detection-submission",
-             'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings',
-             "bm25-retrieval-metrics", "check-rag-contamination", "judge-rag-answers"]),
-    ("eprint", ["build-chart", "digest-paper", "discover-papers", "link-notes",
-                "profile-dataset", "query-sql", "report", "verify-analysis",
+             "make-detection-submission"]),
+    ("eprint", ["verify-analysis",
                 "inspect-images", "split-images", "scaffold-train", "evaluate-detection",
-                "make-detection-submission",
-                'frame-research-question', 'design-experiment', 'validate-eval-task', 'scaffold-trials', 'analyze-trials', 'diagnose-failures', 'write-findings',
-                "bm25-retrieval-metrics", "check-rag-contamination", "judge-rag-answers"]),
-    # research network fetch with retry/backoff (429/5xx + Retry-After) — must stay in sync
-    ("http_get_bytes", ["discover-papers", "digest-paper"]),
+                "make-detection-submission"]),
     # cv-modeler pipeline: the canonical image_id, and the safety-critical leaky-split predicate
     ("stem_of", ["inspect-images", "split-images", "evaluate-detection", "make-detection-submission"]),
     ("is_leaky_provenance", ["split-images", "evaluate-detection", "scaffold-train"]),
-    # agent-security defense-in-depth scope gate (must refuse identically everywhere)
-    ("enforce_authorized_scope", ["build-attack-chains", "scaffold-attack", "run-redteam-eval"]),
-    # agent-researcher pipeline: the anti-HARKing hash. If these drift, a hypothesis edited after
-    # results exist stops being detectable — the whole preregistration guarantee rests on this.
-    ("prereg_hash", ["frame-research-question", "design-experiment", "validate-eval-task",
-                     "scaffold-trials", "analyze-trials", "write-findings"]),
-    ("load_trials", ["analyze-trials", "diagnose-failures"]),
-    # RAG research specialization: the pure-python BM25 + tokenizer copied across the two retrieval-side skills
-    ("tokenize", ["bm25-retrieval-metrics", "check-rag-contamination"]),
-    ("build_bm25", ["bm25-retrieval-metrics", "check-rag-contamination"]),
-    ("bm25_scores", ["bm25-retrieval-metrics", "check-rag-contamination"]),
 ]
 
 

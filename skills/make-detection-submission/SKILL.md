@@ -30,12 +30,11 @@ Stage 5 (final) of the **cv-modeler** pipeline. A submission fails on format bef
 ## Steps
 1. **Run it** (project venv):
    ```bash
-   .venv/bin/python "${CLAUDE_PLUGIN_ROOT}/skills/make-detection-submission/scripts/make_detection_submission.py" \
+   .venv/bin/python "${CLAUDE_SKILL_DIR}/scripts/make_detection_submission.py" \
        --predictions preds.csv --sample-submission sample_submission.csv \
        [--format streak|coco] [--box-order conf,x,y,w,h] [--conf-threshold 0.0] [--max-per-image 0] \
        [--class-map cv_train_scaffold/class_map.json]
    ```
-   (If `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/make-detection-submission/scripts/make_detection_submission.py`.)
 2. **Confirm the box order/units** against the competition's sample row — this is the one thing the tool cannot
    verify for you. Fix `--box-order` if the comp expects e.g. `x,y,w,h,conf` or normalized coords.
 3. **Read the warnings.** An empty or sparse submission means the detector (or the confidence threshold) is off —

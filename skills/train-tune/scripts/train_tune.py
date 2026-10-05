@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Leakage-safe hyperparameter tuning for tabular models — claude-all-in-one-plugin.
+"""Leakage-safe hyperparameter tuning for tabular models — claude-research-template.
 
 Takes the splits + a model family, runs RandomizedSearchCV with the WHOLE
 preprocessor inside the CV pipeline (so every transformer refits per fold — the

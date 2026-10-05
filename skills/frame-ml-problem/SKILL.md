@@ -17,7 +17,7 @@ This skill does **not** train anything. It interrogates the goal, forces the rig
 - Before deciding **whether to use ML at all** (this skill includes that gate).
 
 ## Contract (important)
-- **NO modeling, NO data work.** This is upstream of `profile-dataset` / `clean-data`. The deliverable is a document, not a model.
+- **NO modeling, NO data work.** This is upstream of data profiling and cleaning. The deliverable is a document, not a model.
 - **Don't assume — ask.** Framing answers live in the user's head and the business context, not in any file. Ask, then write down what they said.
 - **Separate the two goals.** The *ideal outcome* (what the product should achieve, independent of any model) is NOT the same as the *model's goal* (what the model predicts). Conflating them is the core failure mode this skill prevents.
 - **Business success ≠ model metrics.** Accuracy / precision / recall / AUC are model evaluation metrics. They are not proof of business success. Keep them in separate sections.
@@ -37,7 +37,7 @@ Work through these as a conversation. Ask the questions, push back on vague answ
 
 3. **Define the model's goal & output.** Only if ML cleared the gate.
    - What exactly does the model predict/do? Name the **task type**: binary/multiclass classification, regression, ranking, recommendation, sequence/generation, sequential decision-making (→ RL), etc.
-   - **Handoff if the goal is an *agent*, not a model.** If the deliverable is something that *acts* — plays a game / competes on a Kaggle agent ladder, or is a tool-using agent to attack/defend — this tabular framing doesn't fit. Stop and hand off: a Kaggle "submit-an-agent" competition → `game-agent-builder`; red-teaming/hardening a tool-using agent → `agent-redteamer`. (`model-builder` stays tabular and refuses RL/agents.)
+   - **Handoff if the goal is an *agent*, not a model.** If the deliverable is something that *acts* — plays a game / competes on an agent ladder — this tabular framing doesn't fit. Stop and hand off to `game-agent-builder`. (`model-builder` stays tabular and refuses RL/agents.)
    - **Handoff if the goal is *images*, not tabular rows.** If the input is images and the goal is object detection / image classification / segmentation (bounding boxes, masks, a COCO-annotated dataset, an mAP/IoU/Dice metric), this tabular framing doesn't fit either. Stop and hand off to `cv-modeler` (it scaffolds a leakage-safe, transfer-learning YOLO detection pipeline; it does NOT train the model — that's GPU-hours the user runs — and does NOT do vision-model security / machine-unlearning). (`model-builder` stays tabular and refuses images.)
    - What is the concrete **output format** and how is it consumed (a score? a label? a ranked list? an action)? What threshold/decision turns the output into the product behavior?
 
@@ -54,12 +54,11 @@ Work through these as a conversation. Ask the questions, push back on vague answ
    - Risks: what data would constitute **leakage** (info not available at prediction time)? What does a wrong prediction cost? What's the failure mode if the model is confidently wrong?
 
 7. **Write the brief.** Fill the template at
-   `${CLAUDE_PLUGIN_ROOT}/skills/frame-ml-problem/templates/framing-brief.md`
-   (if `${CLAUDE_PLUGIN_ROOT}` is unset, use `skills/frame-ml-problem/templates/framing-brief.md`)
+   `${CLAUDE_SKILL_DIR}/templates/framing-brief.md`
    and save the result as `problem_framing_brief.md` in the user's working directory. Leave any unanswered question explicitly marked `❓ OPEN` rather than guessing.
    - **Fill the "Framing at a glance" Mermaid diagram** at the top with the real values — it is the brief in one picture and must not be left as placeholders. Keep node labels short; put detail in the sections below.
 
-8. **Confirm & hand off.** Walk the user through the filled brief, flag open questions, and recommend the next step: if ML is justified and data exists → `profile-dataset`; if heuristic-first → ship that and instrument metrics; if undecided → a time-boxed prototype against the heuristic benchmark.
+8. **Confirm & hand off.** Walk the user through the filled brief, flag open questions, and recommend the next step: if ML is justified and data exists → profile and clean it, then `split-dataset`; if heuristic-first → ship that and instrument metrics; if undecided → a time-boxed prototype against the heuristic benchmark.
 
 ## Output style
 - Conversational and Socratic during steps 1–6 — short, pointed questions, one cluster at a time. Push back on vague or unmeasurable answers.

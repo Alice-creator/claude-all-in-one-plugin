@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate a model from a PREDICTIONS file — claude-all-in-one-plugin.
+"""Evaluate a model from a PREDICTIONS file — claude-research-template.
 
 Framework-agnostic by design: it never loads a model. It takes a table with
 y_true, y_pred (and optionally y_score + feature columns) and reports overall
